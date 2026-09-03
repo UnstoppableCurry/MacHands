@@ -565,8 +565,10 @@ final class Executor {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         context.imageInterpolation = .high
+        // `from:` 用的是 rep 的点坐标(Retina 截图 size = pixels/2),不是像素;
+        // 传 .zero 表示整张图,否则 2x 屏只会画出左下角四分之一。
         _ = rep.draw(in: NSRect(x: 0, y: 0, width: width, height: height),
-                     from: NSRect(x: 0, y: 0, width: rep.pixelsWide, height: rep.pixelsHigh),
+                     from: .zero,
                      operation: .copy,
                      fraction: 1.0,
                      respectFlipped: false,
