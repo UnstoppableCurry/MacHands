@@ -1,5 +1,35 @@
 import Foundation
 
+/// 一个上了锁的盒子。
+///
+/// 为什么需要它:`DispatchQueue.async(group:execute:)` 与 `DispatchWorkItem` 的闭包
+/// 在现在的 SDK 里是 `@Sendable` 的,而 `@Sendable` 闭包**不允许捕获可变的局部变量**
+/// ——「mutation of captured var in concurrently-executing code」是错误,不是警告。
+/// 捕获一个 `let` 引用、把可变状态藏进引用里,是唯一干净的写法。
+/// 锁是自己上的,所以 `@unchecked Sendable` 名副其实。
+final class LockedBox<Value>: @unchecked Sendable {
+
+    private let lock = NSLock()
+    private var storage: Value
+
+    init(_ value: Value) {
+        self.storage = value
+    }
+
+    var value: Value {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return storage
+        }
+        set {
+            lock.lock()
+            storage = newValue
+            lock.unlock()
+        }
+    }
+}
+
 /// 一次性子进程的结果。
 struct CommandResult {
     let status: Int32
@@ -78,10 +108,9 @@ enum Shell {
         process.standardError = errPipe
         process.standardInput = inPipe
 
-        var outData = Data()
-        var errData = Data()
+        let outBox = LockedBox(Data())
+        let errBox = LockedBox(Data())
         let group = DispatchGroup()
-        let lock = NSLock()
 
         let finished = DispatchSemaphore(value: 0)
         process.terminationHandler = { _ in finished.signal() }
@@ -94,12 +123,10 @@ enum Shell {
         }
 
         DispatchQueue.global(qos: .utility).async(group: group) {
-            let data = outPipe.fileHandleForReading.readDataToEndOfFile()
-            lock.lock(); outData = data; lock.unlock()
+            outBox.value = outPipe.fileHandleForReading.readDataToEndOfFile()
         }
         DispatchQueue.global(qos: .utility).async(group: group) {
-            let data = errPipe.fileHandleForReading.readDataToEndOfFile()
-            lock.lock(); errData = data; lock.unlock()
+            errBox.value = errPipe.fileHandleForReading.readDataToEndOfFile()
         }
 
         if let input = standardInput, let data = input.data(using: .utf8) {
@@ -120,10 +147,8 @@ enum Shell {
         // 孙进程可能还攥着管子,所以等待有上限。
         _ = group.wait(timeout: .now() + 3)
 
-        lock.lock()
-        let out = String(data: outData, encoding: .utf8) ?? ""
-        let err = String(data: errData, encoding: .utf8) ?? ""
-        lock.unlock()
+        let out = String(data: outBox.value, encoding: .utf8) ?? ""
+        let err = String(data: errBox.value, encoding: .utf8) ?? ""
 
         let status = process.isRunning ? -1 : process.terminationStatus
         return CommandResult(status: status, stdout: out, stderr: err,

@@ -291,10 +291,10 @@ final class Executor {
                                     "cannot start \(shellPath): \(error.localizedDescription)")
         }
 
-        var timedOut = false
-        let killLock = NSLock()
+        // `DispatchWorkItem` 的闭包是 @Sendable 的,捕获不了可变局部变量,所以用盒子。
+        let timedOut = LockedBox(false)
         let killer = DispatchWorkItem {
-            killLock.lock(); timedOut = true; killLock.unlock()
+            timedOut.value = true
             if process.isRunning { process.terminate() }
         }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout, execute: killer)
@@ -310,9 +310,7 @@ final class Executor {
         let restErr = errPipe.fileHandleForReading.availableData
         if !restErr.isEmpty { Executor.emitChunks(restErr, key: "e", id: requestId, emit: emit) }
 
-        killLock.lock()
-        let wasKilled = timedOut
-        killLock.unlock()
+        let wasKilled = timedOut.value
         if wasKilled {
             emit(.stream(id: requestId,
                          body: .object(["e": .string("\n[machands] timed out after \(Int(timeout))s\n")])))

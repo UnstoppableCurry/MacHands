@@ -119,10 +119,15 @@ public final class E2ESession {
     public let sendDirection: String
     public let receiveDirection: String
 
-    /// shared/PROTOCOL-VECTORS.json:计数器从 **1** 开始单调递增。
-    /// 接收侧只要求严格递增,所以对端从 0 还是 1 开始都能收。
-    private var sendCounter: UInt64 = 1
-    private var lastReceived: UInt64?
+    /// 接收方的滑动重放窗口宽度(shared/PROTOCOL-VECTORS.json 的 `重放窗口`)。
+    /// 用窗口而不是死盯最大值,是为了让同一个 agent 能同时开几条命令。
+    public static let replayWindow: UInt64 = 4096
+
+    /// 已经发出去的最大计数器。0 表示还没发过。
+    private var lastSent: UInt64 = 0
+    /// 收到过的最大计数器,以及最近 replayWindow 个计数器。
+    private var lastReceived: UInt64 = 0
+    private var seenReceived: Set<UInt64> = []
 
     /// 单帧 ≤ 1 MiB(SPEC §4.5)。base64 会放大 4/3,所以明文上限留 700 KiB。
     public static let maxPlaintext = 700 * 1024
@@ -154,12 +159,35 @@ public final class E2ESession {
                   receiveDirection: E2ESession.agentToMac)
     }
 
-    public var nextSendCounter: UInt64 { return sendCounter }
+    /// 最近一次用掉的发送计数器(0 = 还没发过)。只读,给测试与诊断看。
+    public var lastSentCounter: UInt64 { return lastSent }
+    public var highestReceivedCounter: UInt64 { return lastReceived }
+
+    /// 发送计数器 = `max(上一帧 + 1, 毫秒时间戳 × 1000 + 0..999 随机)`。
+    ///
+    /// **绝不能每个进程都从 1 重来**:同一把会话密钥下 nonce 重复会直接毁掉
+    /// ChaCha20-Poly1305,而且接收方会把新进程的第一帧当成重放。CLI 每次调用都是
+    /// 新进程,App 重启同理 —— 所以计数器由时钟兜底,不用落盘也只增不减。
+    /// 那 0..999 的随机是为了同一毫秒里起的两个进程不撞车。
+    public static func nextCounter(last: UInt64, nowMilliseconds: UInt64, jitter: UInt64) -> UInt64 {
+        let byClock = nowMilliseconds &* 1000 &+ (jitter % 1000)
+        let bySequence = last &+ 1
+        return bySequence > byClock ? bySequence : byClock
+    }
 
     public func seal(_ plaintext: Data) throws -> String {
+        let now = UInt64(max(0, (Date().timeIntervalSince1970 * 1000).rounded()))
+        let counter = E2ESession.nextCounter(last: lastSent,
+                                             nowMilliseconds: now,
+                                             jitter: UInt64.random(in: 0..<1000))
+        return try seal(plaintext, counter: counter)
+    }
+
+    /// 指定计数器的版本。只给测试向量用 —— 生产代码走 `seal(_:)`,
+    /// 让计数器规则只有一处实现。
+    public func seal(_ plaintext: Data, counter: UInt64) throws -> String {
         guard plaintext.count <= E2ESession.maxPlaintext else { throw E2EError.sealFailed }
-        let counter = sendCounter
-        sendCounter &+= 1
+        lastSent = counter
         let nonceBytes = E2ECrypto.nonce(direction: sendDirection, counter: counter)
         let aad = Data((localId + ">" + remoteId).utf8)
         guard let nonce = try? ChaChaPoly.Nonce(data: nonceBytes),
@@ -187,7 +215,14 @@ public final class E2ESession {
 
         var counter: UInt64 = 0
         for index in 4..<12 { counter = (counter << 8) | UInt64(bytes[index]) }
-        if let last = lastReceived, counter <= last { throw E2EError.replay(counter) }
+        // 滑动窗口:太老的丢(超出窗口),见过的丢(重放),其余接受。
+        // `lastReceived < replayWindow` 时下界是负的,那就谁都不算太老 ——
+        // 无符号减法会绕回去,所以先比一次。
+        if lastReceived >= E2ESession.replayWindow,
+           counter <= lastReceived - E2ESession.replayWindow {
+            throw E2EError.replay(counter)
+        }
+        if seenReceived.contains(counter) { throw E2EError.replay(counter) }
 
         let ciphertext = Data(bytes[12..<(bytes.count - 16)])
         let tag = Data(bytes[(bytes.count - 16)..<bytes.count])
@@ -198,7 +233,15 @@ public final class E2ESession {
               let plaintext = try? ChaChaPoly.open(box, using: key, authenticating: aad) else {
             throw E2EError.decryptFailed
         }
-        lastReceived = counter
+        // 只有真的解开了才记账:解不开的帧不该影响窗口。
+        seenReceived.insert(counter)
+        if counter > lastReceived { lastReceived = counter }
+        if seenReceived.count > Int(E2ESession.replayWindow) {
+            let floor = lastReceived >= E2ESession.replayWindow
+                ? lastReceived - E2ESession.replayWindow
+                : 0
+            seenReceived = seenReceived.filter { $0 > floor }
+        }
         return plaintext
     }
 }

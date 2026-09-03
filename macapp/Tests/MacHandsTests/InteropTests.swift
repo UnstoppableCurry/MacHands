@@ -149,11 +149,20 @@ final class InteropTests: XCTestCase {
             let expectedBody = try XCTUnwrap(frame["body_base64url"]?.stringValue)
             let plaintext = try XCTUnwrap(frame["plaintext_utf8"]?.stringValue)
             let counter = try XCTUnwrap(frame["counter"]?.intValue)
-            // 计数器从 1 开始,向量也从 1 开始,顺序一致,所以直接 seal 就对得上。
-            XCTAssertEqual(Int(sending.nextSendCounter), counter,
-                           "our counter must line up with the vectors")
-            let body = try sending.seal(Data(plaintext.utf8))
+            // 真实的计数器是时钟推出来的(见 _doc 的「计数器」),不可能复现;
+            // 向量里的 1/2/3 只是为了给出稳定的样本,所以这里显式指定计数器。
+            let body = try sending.seal(Data(plaintext.utf8), counter: UInt64(counter))
             XCTAssertEqual(body, expectedBody)
+            XCTAssertEqual(sending.lastSentCounter, UInt64(counter))
+
+            if let nonceHex = frame["nonce_hex"]?.stringValue {
+                XCTAssertEqual(CoreTestHelpers.hex(E2ECrypto.nonce(direction: "m2a",
+                                                                   counter: UInt64(counter))),
+                               nonceHex)
+            }
+            if let aad = frame["aad_utf8"]?.stringValue {
+                XCTAssertEqual(aad, macId + ">" + agentId)
+            }
         }
     }
 

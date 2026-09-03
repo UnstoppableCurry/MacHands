@@ -175,8 +175,9 @@ final class RelayClient {
         }
         task = nil
         authed = false
-        e2e.removeAll()
         online.removeAll()
+        // `e2e` 故意**留着**:密钥是从静态密钥推出来的,重连并不换密钥;
+        // 而计数器与重放窗口一旦清掉,老帧就又能被中继重放一次了。
     }
 
     private func receiveOnQueue(_ socket: URLSessionWebSocketTask, generation mine: Int) {
@@ -322,6 +323,10 @@ final class RelayClient {
                 state = .failed(L("fail.banned"))
                 wantsConnection = false
                 teardownOnQueue()
+            case "BUSY":
+                // 同一个 id 在别处登录,中继把**这条**连接顶下线。多半是另一份
+                // MacHands 也在跑。照常重连,但把退避拉满,免得两边互相顶来顶去。
+                attempt = 6
             default:
                 break                       // OFFLINE / NOT_PAIRED / RATE:不致命
             }
@@ -339,10 +344,8 @@ final class RelayClient {
             handleIncomingFrame(frame)
 
         case .presence(let presence):
-            // 会话(以及两个方向的计数器)是**连接**级的:对端上线/下线就意味着
-            // 它那边的计数器从 1 重新开始,所以我们也把这条会话丢掉重建。
-            // presence 是两端共同的同步信号 —— 中继给双方都发。
-            e2e.removeValue(forKey: presence.id)
+            // 会话**不**跟着 presence 重建:计数器由时钟兜底、只增不减,
+            // 保住这条会话就等于保住那个 4096 宽的重放窗口。
             if presence.online { online.insert(presence.id) } else { online.remove(presence.id) }
             DispatchQueue.main.async { [weak self] in self?.onAgentsChanged?() }
 

@@ -127,17 +127,56 @@ final class E2ETests: XCTestCase {
         XCTAssertEqual(try mac.open(try agent.seal(reply)), reply)
     }
 
-    func testCounterStartsAtOneAndIncrements() throws {
+    /// 计数器规则:max(上一帧 + 1, 毫秒 × 1000 + 0..999)。
+    /// **不能**每个进程都从 1 重来 —— 那会让同一把密钥下的 nonce 重复。
+    func testNextCounterRule() {
+        // 时钟远远领先于序号:走时钟。
+        let byClock = E2ESession.nextCounter(last: 5, nowMilliseconds: 1_756_800_000_000, jitter: 7)
+        XCTAssertEqual(byClock, 1_756_800_000_000 * 1000 + 7)
+
+        // 同一毫秒里连发:序号接上,绝不重复。
+        let again = E2ESession.nextCounter(last: byClock,
+                                           nowMilliseconds: 1_756_800_000_000,
+                                           jitter: 7)
+        XCTAssertEqual(again, byClock + 1)
+        XCTAssertGreaterThan(again, byClock)
+
+        // 抖动只取 0..999。
+        XCTAssertEqual(E2ESession.nextCounter(last: 0, nowMilliseconds: 1, jitter: 1_234), 1000 + 234)
+    }
+
+    func testCountersAreTimeBasedAndStrictlyIncreasing() throws {
         let (mac, agent) = makePair()
-        for expected in UInt64(1)...UInt64(4) {
+        var previous: UInt64 = 0
+        for _ in 0..<4 {
             let body = try mac.seal(Data("hi".utf8))
             let raw = try XCTUnwrap(Base64URL.decode(body))
             let bytes = [UInt8](raw)
             var counter: UInt64 = 0
             for index in 4..<12 { counter = (counter << 8) | UInt64(bytes[index]) }
-            XCTAssertEqual(counter, expected)
+            XCTAssertGreaterThan(counter, previous)
+            // 第一帧就该在时钟量级上,而不是 1 —— 这正是新进程不能从头数的原因。
+            XCTAssertGreaterThan(counter, 1_600_000_000_000 * 1000)
+            previous = counter
             _ = try agent.open(body)
         }
+        XCTAssertEqual(mac.lastSentCounter, previous)
+    }
+
+    /// 一个新的会话对象(= 进程重启)不会把计数器退回 1。
+    func testARestartDoesNotRewindTheCounter() throws {
+        let (mac, agent) = makePair()
+        _ = try agent.open(try mac.seal(Data("before".utf8)))
+        let firstCounter = mac.lastSentCounter
+
+        let restarted = E2ESession(key: mac.key, localId: mac.localId, remoteId: mac.remoteId,
+                                   sendDirection: mac.sendDirection,
+                                   receiveDirection: mac.receiveDirection)
+        _ = try restarted.seal(Data("after".utf8))
+        // 落在同一个时钟量级上,而不是 1;最坏也只比上一帧小几百(同毫秒的抖动)。
+        XCTAssertGreaterThan(restarted.lastSentCounter, 1_600_000_000_000 * 1000)
+        XCTAssertGreaterThan(restarted.lastSentCounter, firstCounter - 1000)
+        XCTAssertEqual(agent.highestReceivedCounter, firstCounter)
     }
 
     func testReplayIsRejected() throws {
@@ -149,6 +188,33 @@ final class E2ETests: XCTestCase {
                 return XCTFail("expected a replay error, got \(error)")
             }
         }
+    }
+
+    /// 窗口内乱序到达的帧要收下(同一个 agent 可以同时开几条命令);
+    /// 窗口之外的老帧要丢。
+    func testSlidingReplayWindow() throws {
+        let (mac, agent) = makePair()
+        let base: UInt64 = 10_000_000
+        let ten = try mac.seal(Data("ten".utf8), counter: base + 10)
+        let nine = try mac.seal(Data("nine".utf8), counter: base + 9)
+        _ = try agent.open(ten)
+        // 比已见过的最大值小,但还在窗口里 → 收。
+        XCTAssertEqual(String(decoding: try agent.open(nine), as: UTF8.self), "nine")
+        // 重复的那一帧 → 丢。
+        XCTAssertThrowsError(try agent.open(nine))
+
+        // 超出 4096 → 太老,丢。
+        let far = try mac.seal(Data("far".utf8), counter: base + 10 - E2ESession.replayWindow)
+        XCTAssertThrowsError(try agent.open(far)) { error in
+            guard let typed = error as? E2EError, case .replay = typed else {
+                return XCTFail("expected a replay error, got \(error)")
+            }
+        }
+        // 刚好在窗口内的边界值 → 收。
+        let edge = try mac.seal(Data("edge".utf8),
+                                counter: base + 11 - E2ESession.replayWindow)
+        XCTAssertEqual(String(decoding: try agent.open(edge), as: UTF8.self), "edge")
+        XCTAssertEqual(agent.highestReceivedCounter, base + 10)
     }
 
     func testWrongDirectionIsRejected() throws {
