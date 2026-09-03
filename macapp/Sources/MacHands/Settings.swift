@@ -241,7 +241,7 @@ enum LoginItem {
     /// 成功返回 nil,失败返回一句人话。
     static func set(_ enabled: Bool) -> String? {
         guard isBundled else {
-            return "开机自启需要打包好的 MacHands.app,不能是 .build 里的裸二进制。"
+            return L("err.notBundled")
         }
         do {
             if enabled {

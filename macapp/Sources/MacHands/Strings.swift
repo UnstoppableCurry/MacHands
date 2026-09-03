@@ -159,6 +159,11 @@ struct Strings {
         "perm.screen.rpc": ["zh": "需要在 Mac 上授权屏幕录制", "en": "screen recording must be allowed on the Mac"],
         "perm.later": ["zh": "以后再说", "en": "Later"],
 
+        // --- 降级说明 ------------------------------------------------------------
+        "err.notBundled": [
+            "zh": "开机自启需要打包好的 MacHands.app,不能是 .build 里的裸二进制。",
+            "en": "Open at login needs the packaged MacHands.app, not the bare build product."],
+
         // --- 连接失败 ------------------------------------------------------------
         "fail.dns": ["zh": "找不到中继的地址", "en": "cannot resolve the relay's address"],
         "fail.refused": ["zh": "中继没有应答", "en": "the relay does not answer"],
