@@ -83,10 +83,13 @@ struct Strings {
         "main.macName": ["zh": "这台 Mac 的名字", "en": "This Mac's name"],
         "main.macId": ["zh": "Mac ID", "en": "Mac ID"],
         "main.mode": ["zh": "审批模式", "en": "Approval mode"],
-        "main.mode.ask": ["zh": "逐条问(推荐)", "en": "Ask every time (recommended)"],
-        "main.mode.auto": ["zh": "自动放行(黑名单仍然拦)", "en": "Automatic (the denylist still blocks)"],
+        "main.mode.ask": ["zh": "逐条问", "en": "Ask each time"],
+        "main.mode.auto": ["zh": "自动放行", "en": "Automatic"],
+        "main.mode.hint.ask": ["zh": "推荐 · 每条命令都要你点头", "en": "Recommended · every command needs your OK"],
+        "main.mode.hint.auto": ["zh": "黑名单仍然拦危险命令", "en": "A denylist still blocks the dangerous stuff"],
         "main.launchAtLogin": ["zh": "开机自动启动", "en": "Open at login"],
         "main.openSettings": ["zh": "设置…", "en": "Settings…"],
+        "main.pausedBanner": ["zh": "已暂停 —— 所有命令都会被自动拒绝", "en": "Paused — every command is being refused"],
 
         // --- 配对块 (SPEC §3) --------------------------------------------------
         // 这两行会原样进用户的剪贴板,既是给人看的说明,也是给 agent 的指令。
@@ -100,6 +103,8 @@ struct Strings {
         // --- 审批卡 (SPEC §5.2 / §7.3) ----------------------------------------
         "approve.title": ["zh": "%@ 想执行", "en": "%@ wants to run"],
         "approve.titleGeneric": ["zh": "%@ 请求 %@", "en": "%@ is asking for %@"],
+        "approve.titleShort": ["zh": "想执行一条命令", "en": "wants to run a command"],
+        "approve.titleGenericShort": ["zh": "请求 %@", "en": "is asking for %@"],
         "approve.once": ["zh": "允许一次", "en": "Allow once"],
         "approve.hour": ["zh": "允许 1 小时", "en": "Allow for an hour"],
         "approve.always": ["zh": "总是允许这条", "en": "Always allow this"],

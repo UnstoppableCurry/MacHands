@@ -24,35 +24,41 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     var onSetLaunchAtLogin: ((Bool) -> Void)?
     var onOpenSettings: (() -> Void)?
 
-    private static let contentWidth: CGFloat = 460
-    private static let bodyWidth: CGFloat = 412
+    private static let contentWidth: CGFloat = 420
 
     private let root = NSStackView()
-    private let iconView = NSImageView()
+    private let badge = GradientBadge(symbolName: "hand.raised.fill", size: 40)
     private let headline = NSTextField(labelWithString: "")
     private let lead = NSTextField(wrappingLabelWithString: "")
 
-    private let copyButton = NSButton()
+    private let copyButton = StyledButton(title: "", kind: .filled(Theme.accentA), size: 14)
     private let copyStatus = NSTextField(wrappingLabelWithString: "")
 
     private let waitingRow = NSStackView()
     private let spinner = NSProgressIndicator()
     private let waitingLabel = NSTextField(labelWithString: "")
 
+    private let pausedBanner = CardView()
+    private let pausedLabel = NSTextField(labelWithString: "")
+
+    private let connectedCard = CardView()
     private let connectedBox = NSStackView()
     private let modeTitle = NSTextField(labelWithString: "")
-    private let askRadio = NSButton()
-    private let autoRadio = NSButton()
-    private let launchCheckbox = NSButton()
+    private let modeSwitcher = NSSegmentedControl()
+    private let modeHint = NSTextField(labelWithString: "")
+    private let launchRow = NSStackView()
+    private let launchLabel = NSTextField(labelWithString: "")
+    private let launchSwitch = NSSwitch()
 
     private let detailsToggle = NSButton()
+    private let detailsCard = CardView()
     private let detailsGrid = NSGridView()
     private let relayValue = NSTextField(labelWithString: "")
     private let nameValue = NSTextField(labelWithString: "")
     private let idValue = NSTextField(labelWithString: "")
 
     private let licenseLabel = NSTextField(wrappingLabelWithString: "")
-    private let settingsButton = NSButton()
+    private let settingsButton = StyledButton(title: "", kind: .outline, size: 11.5, weight: .medium)
 
     private var model = Model()
 
@@ -64,6 +70,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
                               backing: .buffered,
                               defer: false)
         window.title = L("app.name")
+        window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         window.center()
         // 存储属性在 super.init 之前不能读回来,所以这里没有任何 self.xxx。
@@ -81,14 +88,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private func build() {
         guard let window = self.window else { return }
 
-        iconView.image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: nil)
-        iconView.contentTintColor = NSColor.controlAccentColor
-        iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 34, weight: .regular)
-        iconView.imageScaling = .scaleProportionallyUpOrDown
-
-        headline.font = NSFont.systemFont(ofSize: 19, weight: .semibold)
+        headline.font = NSFont.systemFont(ofSize: 20, weight: .bold)
         headline.stringValue = L("main.headline")
-        lead.font = NSFont.systemFont(ofSize: 12)
+        lead.font = NSFont.systemFont(ofSize: 12.5)
         lead.textColor = NSColor.secondaryLabelColor
         lead.maximumNumberOfLines = 3
         lead.stringValue = L("app.tagline")
@@ -96,23 +98,19 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         let headerText = NSStackView(views: [headline, lead])
         headerText.orientation = .vertical
         headerText.alignment = .leading
-        headerText.spacing = 3
+        headerText.spacing = 4
 
-        let header = NSStackView(views: [iconView, headerText])
+        let header = NSStackView(views: [badge, headerText])
         header.orientation = .horizontal
         header.alignment = .top
         header.spacing = 14
 
         // --- 一个大按钮 -------------------------------------------------------
         copyButton.title = L("main.copy")
-        copyButton.bezelStyle = .rounded
-        copyButton.controlSize = .large
-        copyButton.font = NSFont.systemFont(ofSize: 15, weight: .medium)
-        copyButton.keyEquivalent = "\r"
         copyButton.target = self
         copyButton.action = #selector(copyPressed)
 
-        copyStatus.font = NSFont.systemFont(ofSize: 12)
+        copyStatus.font = NSFont.systemFont(ofSize: 11.5)
         copyStatus.textColor = NSColor.secondaryLabelColor
         copyStatus.maximumNumberOfLines = 3
         copyStatus.stringValue = ""
@@ -129,37 +127,73 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         waitingRow.addArrangedSubview(spinner)
         waitingRow.addArrangedSubview(waitingLabel)
 
-        // --- 连上之后 -----------------------------------------------------------
+        // --- 暂停横幅 -----------------------------------------------------------
+        pausedLabel.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        pausedLabel.textColor = Theme.danger
+        pausedLabel.stringValue = "⏸  " + L("main.pausedBanner")
+        pausedBanner.setTint(background: Theme.danger.withAlphaComponent(0.1),
+                             border: Theme.danger.withAlphaComponent(0.35))
+        pausedBanner.addSubview(pausedLabel)
+        pausedLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            pausedLabel.leadingAnchor.constraint(equalTo: pausedBanner.leadingAnchor, constant: 12),
+            pausedLabel.trailingAnchor.constraint(equalTo: pausedBanner.trailingAnchor, constant: -12),
+            pausedLabel.topAnchor.constraint(equalTo: pausedBanner.topAnchor, constant: 9),
+            pausedLabel.bottomAnchor.constraint(equalTo: pausedBanner.bottomAnchor, constant: -9)
+        ])
+        pausedBanner.isHidden = true
+
+        // --- 连上之后:一张卡 -----------------------------------------------------
         modeTitle.stringValue = L("main.mode")
-        modeTitle.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        modeTitle.font = NSFont.systemFont(ofSize: 11.5, weight: .semibold)
+        modeTitle.textColor = .secondaryLabelColor
 
-        askRadio.setButtonType(.radio)
-        askRadio.title = L("main.mode.ask")
-        askRadio.font = NSFont.systemFont(ofSize: 12)
-        askRadio.target = self
-        askRadio.action = #selector(modePressed(_:))
+        modeSwitcher.segmentStyle = .rounded
+        modeSwitcher.segmentCount = 2
+        modeSwitcher.setLabel(L("main.mode.ask"), forSegment: 0)
+        modeSwitcher.setLabel(L("main.mode.auto"), forSegment: 1)
+        modeSwitcher.target = self
+        modeSwitcher.action = #selector(modeChanged)
 
-        autoRadio.setButtonType(.radio)
-        autoRadio.title = L("main.mode.auto")
-        autoRadio.font = NSFont.systemFont(ofSize: 12)
-        autoRadio.target = self
-        autoRadio.action = #selector(modePressed(_:))
+        let modeRow = NSStackView(views: [modeTitle, modeSwitcher])
+        modeRow.orientation = .horizontal
+        modeRow.alignment = .centerY
+        modeRow.distribution = .equalSpacing
 
-        launchCheckbox.setButtonType(.switch)
-        launchCheckbox.title = L("main.launchAtLogin")
-        launchCheckbox.font = NSFont.systemFont(ofSize: 12)
-        launchCheckbox.target = self
-        launchCheckbox.action = #selector(launchToggled)
+        modeHint.font = NSFont.systemFont(ofSize: 11)
+        modeHint.textColor = .tertiaryLabelColor
+
+        launchLabel.stringValue = L("main.launchAtLogin")
+        launchLabel.font = NSFont.systemFont(ofSize: 12)
+        launchSwitch.target = self
+        launchSwitch.action = #selector(launchToggled)
+        launchRow.orientation = .horizontal
+        launchRow.alignment = .centerY
+        launchRow.distribution = .equalSpacing
+        launchRow.addArrangedSubview(launchLabel)
+        launchRow.addArrangedSubview(launchSwitch)
+
+        let divider = NSBox()
+        divider.boxType = .separator
 
         connectedBox.orientation = .vertical
         connectedBox.alignment = .leading
-        connectedBox.spacing = 4
-        connectedBox.addArrangedSubview(modeTitle)
-        connectedBox.addArrangedSubview(askRadio)
-        connectedBox.addArrangedSubview(autoRadio)
-        connectedBox.addArrangedSubview(launchCheckbox)
-        connectedBox.setCustomSpacing(10, after: autoRadio)
-        connectedBox.isHidden = true
+        connectedBox.spacing = 12
+        connectedBox.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        connectedBox.addArrangedSubview(modeRow)
+        connectedBox.setCustomSpacing(4, after: modeRow)
+        connectedBox.addArrangedSubview(modeHint)
+        connectedBox.addArrangedSubview(divider)
+        connectedBox.addArrangedSubview(launchRow)
+        connectedCard.addSubview(connectedBox)
+        connectedBox.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            connectedBox.leadingAnchor.constraint(equalTo: connectedCard.leadingAnchor),
+            connectedBox.trailingAnchor.constraint(equalTo: connectedCard.trailingAnchor),
+            connectedBox.topAnchor.constraint(equalTo: connectedCard.topAnchor),
+            connectedBox.bottomAnchor.constraint(equalTo: connectedCard.bottomAnchor)
+        ])
+        connectedCard.isHidden = true
 
         // --- 折起来的详细信息 -----------------------------------------------------
         detailsToggle.setButtonType(.onOff)
@@ -177,26 +211,32 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         detailsHeader.spacing = 2
 
         for value in [relayValue, nameValue, idValue] {
-            value.font = NSFont.systemFont(ofSize: 12)
+            value.font = NSFont.systemFont(ofSize: 11.5)
             value.isSelectable = true
             value.lineBreakMode = .byTruncatingMiddle
         }
-        idValue.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        idValue.font = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .regular)
         detailsGrid.addRow(with: [gridLabel(L("main.relay")), relayValue])
         detailsGrid.addRow(with: [gridLabel(L("main.macName")), nameValue])
         detailsGrid.addRow(with: [gridLabel(L("main.macId")), idValue])
-        detailsGrid.rowSpacing = 6
+        detailsGrid.rowSpacing = 7
         detailsGrid.columnSpacing = 10
         detailsGrid.column(at: 0).xPlacement = .trailing
-        detailsGrid.isHidden = true
+        detailsCard.addSubview(detailsGrid)
+        detailsGrid.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            detailsGrid.leadingAnchor.constraint(equalTo: detailsCard.leadingAnchor, constant: 14),
+            detailsGrid.trailingAnchor.constraint(lessThanOrEqualTo: detailsCard.trailingAnchor, constant: -14),
+            detailsGrid.topAnchor.constraint(equalTo: detailsCard.topAnchor, constant: 12),
+            detailsGrid.bottomAnchor.constraint(equalTo: detailsCard.bottomAnchor, constant: -12)
+        ])
+        detailsCard.isHidden = true
 
-        licenseLabel.font = NSFont.systemFont(ofSize: 11)
+        licenseLabel.font = NSFont.systemFont(ofSize: 10.5)
         licenseLabel.textColor = NSColor.tertiaryLabelColor
         licenseLabel.maximumNumberOfLines = 2
 
         settingsButton.title = L("main.openSettings")
-        settingsButton.bezelStyle = .rounded
-        settingsButton.controlSize = .small
         settingsButton.target = self
         settingsButton.action = #selector(openSettingsPressed)
 
@@ -209,45 +249,52 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
         root.orientation = .vertical
         root.alignment = .leading
-        root.spacing = 14
-        root.edgeInsets = NSEdgeInsets(top: 18, left: 24, bottom: 18, right: 24)
+        root.spacing = 16
+        root.edgeInsets = NSEdgeInsets(top: 20, left: 24, bottom: 22, right: 24)
         root.translatesAutoresizingMaskIntoConstraints = false
         // 显式标注 [NSView]:元素类型不齐(NSStackView / NSButton / NSTextField /
-        // NSGridView),别让类型检查器自己去猜公共父类。
-        let stacked: [NSView] = [header, copyButton, copyStatus, waitingRow, connectedBox,
-                                 detailsHeader, detailsGrid, footer]
+        // NSGridView / CardView),别让类型检查器自己去猜公共父类。
+        let stacked: [NSView] = [header, pausedBanner, copyButton, copyStatus, waitingRow, connectedCard,
+                                 detailsHeader, detailsCard, footer]
         for view in stacked {
             root.addArrangedSubview(view)
         }
-        root.setCustomSpacing(8, after: copyButton)
-        root.setCustomSpacing(6, after: detailsHeader)
+        root.setCustomSpacing(4, after: copyButton)
+        root.setCustomSpacing(10, after: detailsHeader)
 
         let content = NSView()
         content.addSubview(root)
         window.contentView = content
 
+        let bodyWidth = MainWindowController.contentWidth - 48
         NSLayoutConstraint.activate([
             root.leadingAnchor.constraint(equalTo: content.leadingAnchor),
             root.trailingAnchor.constraint(equalTo: content.trailingAnchor),
             root.topAnchor.constraint(equalTo: content.topAnchor),
             root.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor),
             root.widthAnchor.constraint(equalToConstant: MainWindowController.contentWidth),
-            iconView.widthAnchor.constraint(equalToConstant: 38),
-            iconView.heightAnchor.constraint(equalToConstant: 38),
-            lead.widthAnchor.constraint(equalToConstant: 350),
-            copyButton.widthAnchor.constraint(equalToConstant: MainWindowController.bodyWidth),
-            copyStatus.widthAnchor.constraint(equalToConstant: MainWindowController.bodyWidth),
-            licenseLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 280),
-            footer.widthAnchor.constraint(equalToConstant: MainWindowController.bodyWidth),
-            relayValue.widthAnchor.constraint(lessThanOrEqualToConstant: 300),
-            nameValue.widthAnchor.constraint(lessThanOrEqualToConstant: 300),
-            idValue.widthAnchor.constraint(lessThanOrEqualToConstant: 300)
+            lead.widthAnchor.constraint(equalToConstant: bodyWidth - 54),
+            pausedBanner.widthAnchor.constraint(equalToConstant: bodyWidth),
+            copyButton.widthAnchor.constraint(equalToConstant: bodyWidth),
+            copyButton.heightAnchor.constraint(equalToConstant: 40),
+            copyStatus.widthAnchor.constraint(equalToConstant: bodyWidth),
+            connectedCard.widthAnchor.constraint(equalToConstant: bodyWidth),
+            modeRow.widthAnchor.constraint(equalToConstant: bodyWidth - 28),
+            launchRow.widthAnchor.constraint(equalToConstant: bodyWidth - 28),
+            divider.widthAnchor.constraint(equalToConstant: bodyWidth - 28),
+            modeSwitcher.widthAnchor.constraint(equalToConstant: 170),
+            detailsCard.widthAnchor.constraint(equalToConstant: bodyWidth),
+            licenseLabel.widthAnchor.constraint(lessThanOrEqualToConstant: bodyWidth - 110),
+            footer.widthAnchor.constraint(equalToConstant: bodyWidth),
+            relayValue.widthAnchor.constraint(lessThanOrEqualToConstant: bodyWidth - 90),
+            nameValue.widthAnchor.constraint(lessThanOrEqualToConstant: bodyWidth - 90),
+            idValue.widthAnchor.constraint(lessThanOrEqualToConstant: bodyWidth - 90)
         ])
     }
 
     private func gridLabel(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
-        label.font = NSFont.systemFont(ofSize: 12)
+        label.font = NSFont.systemFont(ofSize: 11.5)
         label.textColor = NSColor.secondaryLabelColor
         label.alignment = .right
         return label
@@ -272,41 +319,40 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         licenseLabel.stringValue = model.licenseLine ?? ""
         licenseLabel.isHidden = (model.licenseLine == nil)
 
-        askRadio.state = (model.mode == .ask) ? .on : .off
-        autoRadio.state = (model.mode == .auto) ? .on : .off
+        modeSwitcher.selectedSegment = (model.mode == .auto) ? 1 : 0
+        modeHint.stringValue = (model.mode == .auto) ? L("main.mode.hint.auto") : L("main.mode.hint.ask")
+        pausedBanner.isHidden = !model.paused
+
         switch LoginItem.status() {
         case .enabled:
-            launchCheckbox.state = .on
-            launchCheckbox.isEnabled = true
+            launchSwitch.state = .on
+            launchSwitch.isEnabled = true
         case .requiresApproval:
-            launchCheckbox.state = .mixed
-            launchCheckbox.isEnabled = true
+            launchSwitch.state = .off
+            launchSwitch.isEnabled = true
         case .disabled:
-            launchCheckbox.state = .off
-            launchCheckbox.isEnabled = true
+            launchSwitch.state = .off
+            launchSwitch.isEnabled = true
         case .unavailable:
-            launchCheckbox.state = .off
-            launchCheckbox.isEnabled = false
+            launchSwitch.state = .off
+            launchSwitch.isEnabled = false
         }
 
         let live = model.agents.filter { model.online.contains($0.id) }
         if let first = live.first {
-            iconView.image = NSImage(systemSymbolName: "checkmark.circle.fill",
-                                     accessibilityDescription: nil)
-            iconView.contentTintColor = NSColor.systemGreen
+            badge.setSymbol("checkmark")
             headline.stringValue = Lf("main.connectedHeadline", first.displayName)
             lead.stringValue = ""
             lead.isHidden = true
             waitingRow.isHidden = true
             spinner.stopAnimation(nil)
-            connectedBox.isHidden = false
+            connectedCard.isHidden = false
         } else {
-            iconView.image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: nil)
-            iconView.contentTintColor = NSColor.controlAccentColor
+            badge.setSymbol("hand.raised.fill")
             headline.stringValue = L("main.headline")
             lead.stringValue = L("app.tagline")
             lead.isHidden = false
-            connectedBox.isHidden = model.agents.isEmpty
+            connectedCard.isHidden = model.agents.isEmpty
             waitingRow.isHidden = false
             waitingLabel.stringValue = waitingText()
             spinner.startAnimation(nil)
@@ -344,21 +390,20 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func copyPressed() { onCopy?() }
 
-    @objc private func modePressed(_ sender: NSButton) {
-        let mode: ApprovalMode = (sender === autoRadio) ? .auto : .ask
-        askRadio.state = (mode == .ask) ? .on : .off
-        autoRadio.state = (mode == .auto) ? .on : .off
+    @objc private func modeChanged() {
+        let mode: ApprovalMode = (modeSwitcher.selectedSegment == 1) ? .auto : .ask
+        modeHint.stringValue = (mode == .auto) ? L("main.mode.hint.auto") : L("main.mode.hint.ask")
         onSetMode?(mode)
     }
 
     @objc private func launchToggled() {
-        onSetLaunchAtLogin?(launchCheckbox.state == .on)
+        onSetLaunchAtLogin?(launchSwitch.state == .on)
     }
 
     @objc private func openSettingsPressed() { onOpenSettings?() }
 
     @objc private func toggleDetails() {
-        detailsGrid.isHidden = (detailsToggle.state != .on)
+        detailsCard.isHidden = (detailsToggle.state != .on)
         fitWindow()
     }
 }

@@ -27,6 +27,7 @@ struct ApprovalRequest {
 /// `.canJoinAllSpaces`:它跟着用户走,而不是把用户拽走。
 ///
 /// 一次只显示一条,后面的排队并在卡上写"还有 N 条"。120 秒没人动就 TIMEOUT。
+/// 视觉上是一张无边框圆角毛玻璃卡片,不是普通标题栏窗口。
 final class ApprovalPanelController: NSObject {
 
     static let shared = ApprovalPanelController()
@@ -49,15 +50,22 @@ final class ApprovalPanelController: NSObject {
 
     private var panel: Panel?
     private let root = NSStackView()
+    private let badge = GradientBadge(symbolName: "hand.raised.fill", size: 26)
     private let titleLabel = NSTextField(wrappingLabelWithString: "")
+    private let subtitleLabel = NSTextField(wrappingLabelWithString: "")
+
+    private let commandCard = CardView()
     private let subjectLabel = NSTextField(wrappingLabelWithString: "")
-    private let expandButton = NSButton()
+    private let expandButton = StyledButton(title: "", kind: .outline, size: 10.5, weight: .medium)
     private let detailLabel = NSTextField(wrappingLabelWithString: "")
+
+    private let timeoutBar = NSProgressIndicator()
     private let queueLabel = NSTextField(labelWithString: "")
-    private let onceButton = NSButton()
-    private let hourButton = NSButton()
-    private let alwaysButton = NSButton()
-    private let denyButton = NSButton()
+
+    private let onceButton = StyledButton(title: "", kind: .filled(Theme.accentA), size: 12, weight: .semibold)
+    private let hourButton = StyledButton(title: "", kind: .outline, size: 12, weight: .medium)
+    private let alwaysButton = StyledButton(title: "", kind: .tinted(Theme.accentB), size: 12, weight: .medium)
+    private let denyButton = StyledButton(title: "", kind: .tinted(Theme.danger), size: 12, weight: .semibold)
 
     // MARK: - 状态
 
@@ -67,7 +75,7 @@ final class ApprovalPanelController: NSObject {
     private var deadline: Date?
     private var tick: Timer?
 
-    private static let width: CGFloat = 380
+    private static let width: CGFloat = 360
 
     // MARK: - 入口(必须在主线程)
 
@@ -105,10 +113,9 @@ final class ApprovalPanelController: NSObject {
 
         let created = Panel(contentRect: NSRect(x: 0, y: 0,
                                                 width: ApprovalPanelController.width, height: 200),
-                            styleMask: [.titled, .closable, .nonactivatingPanel, .utilityWindow],
+                            styleMask: [.nonactivatingPanel],
                             backing: .buffered,
                             defer: false)
-        created.title = L("app.name")
         created.isFloatingPanel = true
         created.becomesKeyOnlyIfNeeded = true
         created.hidesOnDeactivate = false
@@ -116,34 +123,79 @@ final class ApprovalPanelController: NSObject {
         created.isReleasedWhenClosed = false
         created.level = .floating
         created.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        created.standardWindowButton(.closeButton)?.isHidden = true
+        created.isOpaque = false
+        created.backgroundColor = .clear
+        created.hasShadow = true
 
-        titleLabel.font = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        let effect = NSVisualEffectView()
+        effect.material = .hudWindow
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = Theme.cardRadius + 2
+        effect.layer?.cornerCurve = .continuous
+        effect.layer?.masksToBounds = true
+
+        titleLabel.font = NSFont.systemFont(ofSize: 13.5, weight: .bold)
         titleLabel.maximumNumberOfLines = 2
+
+        subtitleLabel.font = NSFont.systemFont(ofSize: 11)
+        subtitleLabel.textColor = .secondaryLabelColor
+        subtitleLabel.maximumNumberOfLines = 1
+
+        let headerText = NSStackView(views: [titleLabel, subtitleLabel])
+        headerText.orientation = .vertical
+        headerText.alignment = .leading
+        headerText.spacing = 2
+
+        let headerRow = NSStackView(views: [badge, headerText])
+        headerRow.orientation = .horizontal
+        headerRow.alignment = .top
+        headerRow.spacing = 10
 
         subjectLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         subjectLabel.maximumNumberOfLines = 6
         subjectLabel.lineBreakMode = .byTruncatingTail
         subjectLabel.isSelectable = true
+        subjectLabel.textColor = .labelColor
+        commandCard.addSubview(subjectLabel)
+        subjectLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            subjectLabel.leadingAnchor.constraint(equalTo: commandCard.leadingAnchor, constant: 11),
+            subjectLabel.trailingAnchor.constraint(equalTo: commandCard.trailingAnchor, constant: -11),
+            subjectLabel.topAnchor.constraint(equalTo: commandCard.topAnchor, constant: 9),
+            subjectLabel.bottomAnchor.constraint(equalTo: commandCard.bottomAnchor, constant: -9)
+        ])
 
-        expandButton.bezelStyle = .inline
-        expandButton.controlSize = .small
-        expandButton.font = NSFont.systemFont(ofSize: 11)
         expandButton.target = self
         expandButton.action = #selector(toggleExpand)
         expandButton.isHidden = true
 
-        detailLabel.font = NSFont.systemFont(ofSize: 11)
-        detailLabel.textColor = .secondaryLabelColor
+        detailLabel.font = NSFont.systemFont(ofSize: 10.5)
+        detailLabel.textColor = .tertiaryLabelColor
         detailLabel.maximumNumberOfLines = 3
 
-        queueLabel.font = NSFont.systemFont(ofSize: 11)
+        timeoutBar.style = .bar
+        timeoutBar.isIndeterminate = false
+        timeoutBar.minValue = 0
+        timeoutBar.maxValue = Double(ApprovalPanelController.timeoutSeconds)
+        timeoutBar.controlSize = .small
+
+        queueLabel.font = NSFont.systemFont(ofSize: 10.5)
         queueLabel.textColor = .tertiaryLabelColor
 
-        configure(onceButton, title: L("approve.once"), key: "1", action: #selector(allowOnce))
-        configure(hourButton, title: L("approve.hour"), key: "2", action: #selector(allowHour))
-        configure(alwaysButton, title: L("approve.always"), key: "3", action: #selector(allowAlways))
-        configure(denyButton, title: L("approve.deny"), key: "4", action: #selector(refuse))
+        configure(onceButton, title: L("approve.once"))
+        configure(hourButton, title: L("approve.hour"))
+        configure(alwaysButton, title: L("approve.always"))
+        configure(denyButton, title: L("approve.deny"))
+        onceButton.keyEquivalent = "1"
+        hourButton.keyEquivalent = "2"
+        alwaysButton.keyEquivalent = "3"
+        denyButton.keyEquivalent = "4"
+        onceButton.target = self; onceButton.action = #selector(allowOnce)
+        hourButton.target = self; hourButton.action = #selector(allowHour)
+        alwaysButton.target = self; alwaysButton.action = #selector(allowAlways)
+        denyButton.target = self; denyButton.action = #selector(refuse)
 
         let topRow = NSStackView(views: [onceButton, hourButton])
         topRow.orientation = .horizontal
@@ -157,30 +209,36 @@ final class ApprovalPanelController: NSObject {
 
         root.orientation = .vertical
         root.alignment = .leading
-        root.spacing = 8
-        root.edgeInsets = NSEdgeInsets(top: 12, left: 14, bottom: 12, right: 14)
+        root.spacing = 10
+        root.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         root.translatesAutoresizingMaskIntoConstraints = false
-        root.addArrangedSubview(titleLabel)
-        root.addArrangedSubview(subjectLabel)
+        root.addArrangedSubview(headerRow)
+        root.addArrangedSubview(commandCard)
         root.addArrangedSubview(expandButton)
         root.addArrangedSubview(detailLabel)
+        root.addArrangedSubview(timeoutBar)
         root.addArrangedSubview(queueLabel)
         root.addArrangedSubview(topRow)
         root.addArrangedSubview(bottomRow)
+        root.setCustomSpacing(4, after: timeoutBar)
 
-        let content = NSView()
-        content.addSubview(root)
-        created.contentView = content
+        effect.addSubview(root)
+        created.contentView = effect
 
-        let inner = ApprovalPanelController.width - 28
+        let inner = ApprovalPanelController.width - 32
+        let bodyInsetInner = inner - 36  // 头部让出徽标宽度
         NSLayoutConstraint.activate([
-            root.leadingAnchor.constraint(equalTo: content.leadingAnchor),
-            root.trailingAnchor.constraint(equalTo: content.trailingAnchor),
-            root.topAnchor.constraint(equalTo: content.topAnchor),
-            root.bottomAnchor.constraint(equalTo: content.bottomAnchor),
-            titleLabel.widthAnchor.constraint(equalToConstant: inner),
-            subjectLabel.widthAnchor.constraint(equalToConstant: inner),
+            root.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+            root.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+            root.topAnchor.constraint(equalTo: effect.topAnchor),
+            root.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
+            headerText.widthAnchor.constraint(equalToConstant: bodyInsetInner),
+            titleLabel.widthAnchor.constraint(equalToConstant: bodyInsetInner),
+            subtitleLabel.widthAnchor.constraint(equalToConstant: bodyInsetInner),
+            commandCard.widthAnchor.constraint(equalToConstant: inner),
             detailLabel.widthAnchor.constraint(equalToConstant: inner),
+            timeoutBar.widthAnchor.constraint(equalToConstant: inner),
+            queueLabel.widthAnchor.constraint(equalToConstant: inner),
             topRow.widthAnchor.constraint(equalToConstant: inner),
             bottomRow.widthAnchor.constraint(equalToConstant: inner)
         ])
@@ -189,15 +247,8 @@ final class ApprovalPanelController: NSObject {
         return created
     }
 
-    private func configure(_ button: NSButton, title: String, key: String, action: Selector) {
+    private func configure(_ button: StyledButton, title: String) {
         button.title = title
-        button.bezelStyle = .rounded
-        button.controlSize = .regular
-        button.font = NSFont.systemFont(ofSize: 12)
-        button.target = self
-        button.action = action
-        // 数字键 1-4(SPEC §5.2)。面板被点一下成为 key window 之后就能用。
-        button.keyEquivalent = key
     }
 
     // MARK: - 显示
@@ -236,10 +287,11 @@ final class ApprovalPanelController: NSObject {
 
     private func render(_ request: ApprovalRequest) {
         if request.method == "run" {
-            titleLabel.stringValue = Lf("approve.title", request.agentName)
+            titleLabel.stringValue = L("approve.titleShort")
         } else {
-            titleLabel.stringValue = Lf("approve.titleGeneric", request.agentName, request.method)
+            titleLabel.stringValue = Lf("approve.titleGenericShort", request.method)
         }
+        subtitleLabel.stringValue = request.agentName
         subjectLabel.stringValue = request.subject.isEmpty ? request.method : request.subject
         subjectLabel.maximumNumberOfLines = expanded ? 0 : 6
 
@@ -258,17 +310,12 @@ final class ApprovalPanelController: NSObject {
         detailLabel.stringValue = details.joined(separator: "   ")
         detailLabel.isHidden = details.isEmpty
 
+        timeoutBar.doubleValue = Double(ApprovalPanelController.timeoutSeconds)
         renderQueueCount()
     }
 
     private func renderQueueCount() {
-        var parts: [String] = []
-        if !queue.isEmpty { parts.append(Lf("approve.more", queue.count)) }
-        if let deadline = deadline {
-            let left = max(0, Int(deadline.timeIntervalSinceNow.rounded()))
-            parts.append(Lf("approve.timeout", left))
-        }
-        queueLabel.stringValue = parts.joined(separator: "   ·   ")
+        queueLabel.stringValue = queue.isEmpty ? "" : Lf("approve.more", queue.count)
     }
 
     private func placeTopRight(_ window: NSWindow) {
@@ -282,9 +329,11 @@ final class ApprovalPanelController: NSObject {
 
     private func onTick() {
         guard let deadline = deadline else { return }
-        if Date() >= deadline {
+        let left = deadline.timeIntervalSinceNow
+        if left <= 0 {
             finish(.timeout)
         } else {
+            timeoutBar.doubleValue = left
             renderQueueCount()
         }
     }
