@@ -1,0 +1,192 @@
+{
+  "_doc": {
+    "version": 1,
+    "生成方式": "node tools/gen-vectors.mjs;私钥 = SHA-256(标签) 写死,仅用于测试互通,绝不作为真实身份。",
+    "编码": "除非字段名以 _hex 结尾,所有二进制字段都是 base64url 无填充(RFC 4648 §5,去掉 =)。",
+    "id": "macId / agentId 是 16 字节随机数的 base32(小写字母表 abcdefghijklmnopqrstuvwxyz234567,无填充)前 26 个字符。",
+    "x25519": "原始私钥/公钥都是 32 字节。Node 侧用 PKCS8/SPKI 前缀包一层,CryptoKit 侧直接用 rawRepresentation。",
+    "共享密钥": "ss = X25519(myPriv, theirPub),32 字节;两端算出来必须一致。",
+    "会话密钥": "key = HKDF-SHA256(ikm = ss, salt = utf8(\"machands-v1\"), info = utf8([macId, agentId].sort().join(\"|\")), L = 32)。注意 salt 是 HKDF-Extract 的 salt,info 是 Expand 的 info。",
+    "nonce": "12 字节 = 前 4 字节方向标记 + 后 8 字节大端无符号计数器。方向标记是 \"a2m\"(agent→Mac)或 \"m2a\"(Mac→agent)的 ASCII,只有 3 字节,第 4 字节补 0x00。计数器从 1 开始单调递增。",
+    "aad": "utf8(from + \">\" + to),from/to 是发送方与接收方的 id。",
+    "帧": "body = base64url(nonce ‖ ciphertext ‖ tag16)。算法 ChaCha20-Poly1305(IETF,12 字节 nonce,16 字节 tag)。CryptoKit 的 ChaChaPoly.seal 输出 combined = nonce ‖ ct ‖ tag,与本格式逐字节相同。",
+    "重放": "接收方为每个方向记住已见过的最大计数器,收到 <= 它的帧一律丢弃并断开会话。",
+    "签名": "sig = base64url(Ed25519.sign(edPriv, utf8(canonicalJSON(payload))));canonicalJSON = 键按字典序升序、无空白、字符串按 JSON 转义。",
+    "握手": "relay 在 hello 里给 32 字节随机 nonce(base64url);客户端签 {id, nonce, ts} 三个键。ts 是毫秒时间戳整数。",
+    "配对码": "MH1.<relayHost>:<port>.<relayPubkey>.<macId>.<macXPub>.<macEdPub>.<token>.<base64url(utf8(macName))>,字段用 \".\" 分隔。主机名里可能带点(IPv4),所以解析时从尾部数 6 个字段,第 1 个字段之后、尾部 6 个字段之前的一律拼回 host:port。"
+  },
+  "relay": {
+    "ed25519_priv": "rbOjov3vRGAoKW9Md1DxADBhf7AhaOKuG1kyFsvi3mM",
+    "ed25519_pub": "G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8"
+  },
+  "mac": {
+    "id": "4bpiqf23o63l7kxs5wymtlez4m",
+    "name": "Kai 的 MacBook Pro",
+    "x25519_priv": "qPu25KM2OXVDvUz-sc3IKHKEgOmbyyuMjTTsu945Tkg",
+    "x25519_pub": "zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q",
+    "ed25519_priv": "3Q0W3vgAwoJ2J-Wx70rHjSUSKyJVZljH0eDLVT1KImE",
+    "ed25519_pub": "ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk"
+  },
+  "agent": {
+    "id": "p4lky5qxra53he677xprqolqse",
+    "name": "Claude@vps",
+    "x25519_priv": "O6gfI2wHR806N4mFFHovpXhwol-VAkvQLK2g0hnZBNE",
+    "x25519_pub": "LtNuSUvvt-cVM4RKVCL0xpGVjFEOG1p0xyHbhoumOR8",
+    "ed25519_priv": "YDv0EGG0kl1NcgQwbl-QGI9_ESVRvk8NT0aGIaMDS-U",
+    "ed25519_pub": "2uMWzb-ylgz9l0vQXFG08_ysyTptNdiDm-_D8zryNb4"
+  },
+  "session": {
+    "hkdf_salt_utf8": "machands-v1",
+    "hkdf_info_utf8": "4bpiqf23o63l7kxs5wymtlez4m|p4lky5qxra53he677xprqolqse",
+    "shared_secret_hex": "fbf0ed2e0bf3e70e8695757e25836a32d8a1cb8dbb42b97f043d8c38e5af874b",
+    "key_hex": "3d974dfa3a3fc5702ae1d937b09a75b01d38db05e618831244b2c1a43c268eec",
+    "key_base64url": "PZdN-jo_xXAq4dk3sJp1sB042wXmGIMSRLLBpDwmjuw"
+  },
+  "frames": {
+    "agent_to_mac": [
+      {
+        "dir": "a2m",
+        "from": "p4lky5qxra53he677xprqolqse",
+        "to": "4bpiqf23o63l7kxs5wymtlez4m",
+        "counter": 1,
+        "nonce_hex": "61326d000000000000000001",
+        "aad_utf8": "p4lky5qxra53he677xprqolqse>4bpiqf23o63l7kxs5wymtlez4m",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e01\",\"m\":\"sys.info\",\"p\":{}}",
+        "body_base64url": "YTJtAAAAAAAAAAABmg-PFneGdhkByrn6EUtNQ5760q-7WONJ4m3DRa_Kgk-guudSNJqGtbKRwSJ3cObl_8lPSMLxU1iaMcakZd-qkLjYaFbm1gOzxEE2J4_SU4OETeM"
+      },
+      {
+        "dir": "a2m",
+        "from": "p4lky5qxra53he677xprqolqse",
+        "to": "4bpiqf23o63l7kxs5wymtlez4m",
+        "counter": 2,
+        "nonce_hex": "61326d000000000000000002",
+        "aad_utf8": "p4lky5qxra53he677xprqolqse>4bpiqf23o63l7kxs5wymtlez4m",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e02\",\"m\":\"run\",\"p\":{\"cmd\":\"sw_vers\",\"cwd\":\"~\",\"timeout\":600}}",
+        "body_base64url": "YTJtAAAAAAAAAAACYDfi1DxkYcdti3BKqR8XsKvPDbPUI7k_2WDY8kh4uK0epGmdEEWIhkiW3ttr-ejWsLp_odiOlCEZIbN777rhWe3HK0sQYgEMD-sovL-1MBd3YvMrk8o6D-eCaeBoU_F3FYdirHACfadVzcASJN0j1e0GOp_D"
+      },
+      {
+        "dir": "a2m",
+        "from": "p4lky5qxra53he677xprqolqse",
+        "to": "4bpiqf23o63l7kxs5wymtlez4m",
+        "counter": 3,
+        "nonce_hex": "61326d000000000000000003",
+        "aad_utf8": "p4lky5qxra53he677xprqolqse>4bpiqf23o63l7kxs5wymtlez4m",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e03\",\"m\":\"fs.put\",\"p\":{\"path\":\"~/Desktop/hello.txt\",\"data\":\"5L2g5aW9LE1hY0hhbmRzCg==\"}}",
+        "body_base64url": "YTJtAAAAAAAAAAADwLCwVWu_mRrLpAaH8J_whKUfYE1tFKeKxe5rIful5mLQYybp9FD0pyUBO46jaREHXI05I9Ev79hATmhWhsgy2TlCJNcWthjfF7DVdSL2MFXJEJvkVfMoW-m7r7hFxU3WX6Nb70OOtvBFgNdkgVoiWCSdkmYKYcLJ2LGrs3dCmePFUAwALewyRaGUV9lwG-Y"
+      }
+    ],
+    "mac_to_agent": [
+      {
+        "dir": "m2a",
+        "from": "4bpiqf23o63l7kxs5wymtlez4m",
+        "to": "p4lky5qxra53he677xprqolqse",
+        "counter": 1,
+        "nonce_hex": "6d3261000000000000000001",
+        "aad_utf8": "4bpiqf23o63l7kxs5wymtlez4m>p4lky5qxra53he677xprqolqse",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e01\",\"r\":{\"name\":\"Kai 的 MacBook Pro\",\"model\":\"Mac15,7\",\"os\":\"macOS 15.5\",\"arch\":\"arm64\",\"user\":\"kai\"}}",
+        "body_base64url": "bTJhAAAAAAAAAAABcz_v7phuVn_tOEh26Zrg1OMHEsrPhrOS9rhKV7YepkpEAvQbX_Mb4vmK9aSOefujL_2jtLdB3Ftqa_9NjlJnP-m_DhFzjrgNlKbEOJ7jQeiue3esTvbdHcK3fmE2fJTkaWu4oFSKQIfelKk4rpA9muIy0e6mwHOE70QRjXISEEMRjt0voillbl3rVwlptBrAGpyVFDGkmmh89wWuQUUYig"
+      },
+      {
+        "dir": "m2a",
+        "from": "4bpiqf23o63l7kxs5wymtlez4m",
+        "to": "p4lky5qxra53he677xprqolqse",
+        "counter": 2,
+        "nonce_hex": "6d3261000000000000000002",
+        "aad_utf8": "4bpiqf23o63l7kxs5wymtlez4m>p4lky5qxra53he677xprqolqse",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e02\",\"s\":{\"o\":\"ProductName:\\t\\tmacOS\\n\"}}",
+        "body_base64url": "bTJhAAAAAAAAAAACU1iIGPk11ZpMniSnhYd3L50mJaeb6qCprgwH2n0fzG3GJaL5b7dMf_JFZnMtCtj8p49N6lOib2QzrscPdnGXTV687a4bbY8Tw2nZ18WMd8kwYhooOrljb0ztHGRhGPIFow"
+      },
+      {
+        "dir": "m2a",
+        "from": "4bpiqf23o63l7kxs5wymtlez4m",
+        "to": "p4lky5qxra53he677xprqolqse",
+        "counter": 3,
+        "nonce_hex": "6d3261000000000000000003",
+        "aad_utf8": "4bpiqf23o63l7kxs5wymtlez4m>p4lky5qxra53he677xprqolqse",
+        "plaintext_utf8": "{\"id\":\"5b0f3f2e-0b2a-4f6c-9f21-8f2b1c7d4e02\",\"r\":{\"code\":0,\"ms\":42}}",
+        "body_base64url": "bTJhAAAAAAAAAAADgRjaXfIvG89Q_WWvExXsON4fexODsbwfKilCpL5Nvbegs1wfmCUcuapOg9Ro_FHJAv4Zaav3Pjyr1RNXfc-E47kOOOsI0wNdZMOcE59e9oj_UtiK"
+      }
+    ]
+  },
+  "auth": [
+    {
+      "who": "agent",
+      "auth_message": {
+        "t": "auth",
+        "role": "agent",
+        "id": "p4lky5qxra53he677xprqolqse",
+        "edPub": "2uMWzb-ylgz9l0vQXFG08_ysyTptNdiDm-_D8zryNb4",
+        "xPub": "LtNuSUvvt-cVM4RKVCL0xpGVjFEOG1p0xyHbhoumOR8",
+        "name": "Claude@vps",
+        "sig": "ldinXDPsxOOajq-LF-jGN41Nx4qGJDf_UFBz8EPXvvhNG2353HxF4tcV7EnN80szjiLr4EafclYXv8c889HnAw"
+      },
+      "signed_payload": {
+        "id": "p4lky5qxra53he677xprqolqse",
+        "nonce": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY",
+        "ts": 1756800000000
+      },
+      "canonical_json_utf8": "{\"id\":\"p4lky5qxra53he677xprqolqse\",\"nonce\":\"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY\",\"ts\":1756800000000}",
+      "signature_base64url": "ldinXDPsxOOajq-LF-jGN41Nx4qGJDf_UFBz8EPXvvhNG2353HxF4tcV7EnN80szjiLr4EafclYXv8c889HnAw"
+    },
+    {
+      "who": "mac",
+      "auth_message": {
+        "t": "auth",
+        "role": "mac",
+        "id": "4bpiqf23o63l7kxs5wymtlez4m",
+        "edPub": "ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk",
+        "xPub": "zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q",
+        "name": "Kai 的 MacBook Pro",
+        "sig": "rB_WsimXCIO57jKl1kCS9MFWVnVjk_HGckkAa6PvNzo874bc5mnsuMRj15m8aQ4qphrYgjEn-BLbm5EcAZQhDQ"
+      },
+      "signed_payload": {
+        "id": "4bpiqf23o63l7kxs5wymtlez4m",
+        "nonce": "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA",
+        "ts": 1756800001000
+      },
+      "canonical_json_utf8": "{\"id\":\"4bpiqf23o63l7kxs5wymtlez4m\",\"nonce\":\"ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA\",\"ts\":1756800001000}",
+      "signature_base64url": "rB_WsimXCIO57jKl1kCS9MFWVnVjk_HGckkAa6PvNzo874bc5mnsuMRj15m8aQ4qphrYgjEn-BLbm5EcAZQhDQ"
+    }
+  ],
+  "canonical_json": [
+    {
+      "value": {
+        "b": 1,
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"b\":1}"
+    },
+    {
+      "value": {
+        "z": [
+          3,
+          {
+            "y": 1,
+            "x": 2
+          }
+        ],
+        "nested": {
+          "k": "值",
+          "n": null,
+          "t": true
+        }
+      },
+      "canonical": "{\"nested\":{\"k\":\"值\",\"n\":null,\"t\":true},\"z\":[3,{\"x\":2,\"y\":1}]}"
+    }
+  ],
+  "pairing": {
+    "code": "MH1.134.199.230.126:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw",
+    "decoded": {
+      "host": "134.199.230.126",
+      "port": 8443,
+      "relayPub": "G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8",
+      "macId": "4bpiqf23o63l7kxs5wymtlez4m",
+      "macXPub": "zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q",
+      "macEdPub": "ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk",
+      "token": "bWFjaGFuZHMtdG9rZW4wMQ",
+      "macName": "Kai 的 MacBook Pro"
+    },
+    "token_ttl_seconds": 600,
+    "clipboard_block": "把下面这一行在你的机器上执行,然后告诉我结果:\n\nnpx -y machands@latest pair \"MH1.134.199.230.126:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw\"\n\n(这是 MacHands 配对码,10 分钟内有效,只能用一次。)\n"
+  }
+}
