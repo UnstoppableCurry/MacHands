@@ -49,6 +49,11 @@ Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin
 | 暂停 → 命令被拒(77) | 待用户点暂停后验证 |
 | 撤销授权 → 未配对(66) | 待用户在设置里撤销后验证 |
 
+### 联调中发现、排进 v1.1 的两件事
+- **agent 无法安全地远程重启 App**:`kill` App 后它派生出来的重启脚本一起被结束,Mac 离线,只能人手重开。v1.1 加 RPC `app.relaunch`(App 自己用 `open -n` 拉起新实例后退出)和 `app.update`(下载 DMG、校验、替换、重启)。
+- **临时签名下,每次重新编译都会让"屏幕录制"授权失效**(TCC 按代码签名识别 App),表现为 `could not create image from display`。正式 Developer ID 签名后签名要求稳定,更新不会丢权限。开发期的办法:系统设置里把 MacHands 的屏幕录制关掉再打开。
+- 另:进程名是完整路径,`pkill -x MacHands` 匹配不到;用 `pgrep -f MacHands.app/Contents/MacOS/MacHands`。
+
 ## 发布前只有你能做的三件事
 
 1. **Developer ID 证书**:Xcode → Settings → Accounts → 你的团队 → Manage Certificates → `+` → Developer ID Application。
