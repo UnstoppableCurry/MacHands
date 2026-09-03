@@ -1,0 +1,5 @@
+.build/
+dist/
+Resources/AppIcon.icns
+*.xcodeproj
+.swiftpm/

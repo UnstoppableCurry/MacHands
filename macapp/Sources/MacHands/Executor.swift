@@ -461,10 +461,12 @@ final class Executor {
                 } else {
                     type = childIsDir.boolValue ? "dir" : "file"
                 }
+                // mtime 是**毫秒**:agent/test/fake-mac.mjs 用的是 `st.mtimeMs`,
+                // 真假两个 Mac 实现必须给出同一个量纲。
                 entries.append(.object(["name": .string(relative),
                                         "type": .string(type),
                                         "size": .int(size),
-                                        "mtime": .number(modified.rounded())]))
+                                        "mtime": .number((modified * 1000).rounded())]))
                 if childIsDir.boolValue && level < depth {
                     frontier.append((full, relative, level + 1))
                 }
