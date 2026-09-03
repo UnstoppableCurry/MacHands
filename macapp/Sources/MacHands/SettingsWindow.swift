@@ -29,8 +29,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let licenseTitle = NSTextField(labelWithString: "")
     private let licenseField = NSTextField()
     private let licenseStatus = NSTextField(wrappingLabelWithString: "")
+    private let languageTitle = NSTextField(labelWithString: "")
+    private let languagePopup = NSPopUpButton()
+    private let languageHint = NSTextField(wrappingLabelWithString: "")
     private let saveButton = NSButton()
     private let savedLabel = NSTextField(labelWithString: "")
+
+    /// popup 的行序;`load`/`save` 都按这个表来回,别让下拉框的顺序和存盘的
+    /// 语言代码悄悄错位。
+    private static let languageCodes = ["auto", "zh", "en", "ja", "ko"]
 
     private var licenseLine: String = ""
 
@@ -126,6 +133,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         licenseStatus.textColor = NSColor.secondaryLabelColor
         licenseStatus.maximumNumberOfLines = 2
 
+        languageTitle.stringValue = L("main.language")
+        languageTitle.font = NSFont.systemFont(ofSize: 12, weight: .medium)
+        languagePopup.removeAllItems()
+        for code in SettingsWindowController.languageCodes {
+            languagePopup.addItem(withTitle: L("lang.\(code)"))
+        }
+        languageHint.stringValue = L("settings.languageHint")
+        languageHint.font = NSFont.systemFont(ofSize: 11)
+        languageHint.textColor = NSColor.tertiaryLabelColor
+        languageHint.maximumNumberOfLines = 2
+
         saveButton.title = L("settings.save")
         saveButton.bezelStyle = .rounded
         saveButton.keyEquivalent = "\r"
@@ -152,6 +170,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
                                denyTitle, denyScroll, denyBuiltin,
                                askForReads,
                                licenseTitle, licenseField, licenseStatus,
+                               languageTitle, languagePopup, languageHint,
                                footer]
         for view in views { root.addArrangedSubview(view) }
 
@@ -174,6 +193,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             denyBuiltin.widthAnchor.constraint(equalToConstant: width),
             licenseField.widthAnchor.constraint(equalToConstant: width),
             licenseStatus.widthAnchor.constraint(equalToConstant: width),
+            languageHint.widthAnchor.constraint(equalToConstant: width),
             footer.widthAnchor.constraint(equalToConstant: width)
         ])
     }
@@ -201,6 +221,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         askForReads.state = settings.policy.askForReads ? .on : .off
         licenseField.stringValue = settings.license
         licenseStatus.stringValue = licenseLine
+        let index = SettingsWindowController.languageCodes.firstIndex(of: settings.language) ?? 0
+        languagePopup.selectItem(at: index)
         savedLabel.stringValue = ""
         renderAgents(settings.agents)
         fitWindow()
@@ -263,6 +285,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         next.policy.deny = SettingsWindowController.lines(denyText.string)
         next.policy.askForReads = (askForReads.state == .on)
         next.license = licenseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let index = languagePopup.indexOfSelectedItem
+        if index >= 0 && index < SettingsWindowController.languageCodes.count {
+            next.language = SettingsWindowController.languageCodes[index]
+        }
         savedLabel.stringValue = L("settings.saved")
         onSave?(next)
     }

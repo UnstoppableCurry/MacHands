@@ -78,6 +78,10 @@ struct Settings: Codable, Equatable {
     var seenWelcome: Bool
     /// SPEC §2:中继的 Ed25519 公钥,首次连接就 pin;以后对不上直接拒。
     var pinnedRelayKey: String
+    /// 界面语言:"auto"(跟系统,不认识的语言落到英文)或 `Lang.rawValue`
+    /// (zh/en/ja/ko/…)。改了要重启才生效——Strings 只在启动时解析一次,
+    /// 不追求运行时热切换,换来的是不用给每个视图都接一根"语言变了请重画"的线。
+    var language: String
 
     static func makeDefault() -> Settings {
         return Settings(relayURL: Settings.defaultRelayURL,
@@ -87,12 +91,13 @@ struct Settings: Codable, Equatable {
                         launchAtLogin: true,
                         license: "",
                         seenWelcome: false,
-                        pinnedRelayKey: "")
+                        pinnedRelayKey: "",
+                        language: "auto")
     }
 
     init(relayURL: String, macName: String, agents: [AuthorizedAgent],
          policy: PolicyState, launchAtLogin: Bool, license: String, seenWelcome: Bool,
-         pinnedRelayKey: String) {
+         pinnedRelayKey: String, language: String) {
         self.relayURL = relayURL
         self.macName = macName
         self.agents = agents
@@ -101,6 +106,7 @@ struct Settings: Codable, Equatable {
         self.license = license
         self.seenWelcome = seenWelcome
         self.pinnedRelayKey = pinnedRelayKey
+        self.language = language
     }
 
     /// 旧版本写的文件不会有新键;缺一个键不该让整份配置读不出来。
@@ -114,6 +120,7 @@ struct Settings: Codable, Equatable {
         license = try c.decodeIfPresent(String.self, forKey: .license) ?? ""
         seenWelcome = try c.decodeIfPresent(Bool.self, forKey: .seenWelcome) ?? false
         pinnedRelayKey = try c.decodeIfPresent(String.self, forKey: .pinnedRelayKey) ?? ""
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? "auto"
     }
 
     static func suggestedMacName() -> String {
