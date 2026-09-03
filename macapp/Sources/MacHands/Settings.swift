@@ -236,12 +236,14 @@ enum LoginItem {
             return .enabled
         case .requiresApproval:
             return .requiresApproval
-        case .notRegistered:
+        case .notRegistered, .notFound:
+            // 真机踩过的坑:`.notFound` 不代表开关该锁死。重装/改签名之后 Background
+            // Task Management 有时没同步上,SMAppService 会报 notFound,但
+            // `register()` 照样能成功——不该在这里替用户判死刑,让他能点,
+            // 点了真失败再由 `set(_:)` 的错误提示说明原因。
             return .disabled
-        case .notFound:
-            return .unavailable("login item not found")
         @unknown default:
-            return .unavailable("unknown status")
+            return .disabled
         }
     }
 
