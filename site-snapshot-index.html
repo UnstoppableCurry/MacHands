@@ -25,13 +25,13 @@
     position:sticky; top:0; z-index:50; backdrop-filter:blur(10px);
     background:rgba(8,9,12,.75); border-bottom:1px solid var(--line);
   }
-  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1080px; margin:0 auto}
-  .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; text-decoration:none}
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1080px; margin:0 auto; gap:16px}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; text-decoration:none; flex-shrink:0}
   .brand .mark{
     width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent2));
     display:flex; align-items:center; justify-content:center; font-size:15px;
   }
-  .navlinks{display:flex; gap:28px; font-size:14px; color:var(--muted)}
+  .navlinks{display:flex; gap:28px; font-size:14px; color:var(--muted); margin-right:auto; margin-left:36px}
   .navlinks a{text-decoration:none}
   .navlinks a:hover{color:var(--text)}
   .cta{
@@ -40,6 +40,15 @@
   }
   .cta:hover{opacity:.88}
   .cta.ghost{background:transparent; border:1px solid var(--line); color:var(--text)}
+  .langsw{
+    display:flex; align-items:center; background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:2px; font-family:var(--mono); font-size:12px; flex-shrink:0;
+  }
+  .langsw button{
+    background:transparent; border:none; color:var(--dim); padding:6px 10px; border-radius:6px;
+    font-family:var(--mono); font-size:12px; cursor:pointer; font-weight:600;
+  }
+  .langsw button.on{background:var(--panel2); color:var(--text)}
 
   section{padding:88px 0}
   .hero{padding:96px 0 72px; position:relative; overflow:hidden}
@@ -93,7 +102,6 @@
     padding:20px; max-width:420px; box-shadow:0 30px 80px -30px rgba(0,0,0,.6);
   }
   .approval-mock .h{display:flex; align-items:center; gap:10px; font-weight:700; font-size:14px; margin-bottom:4px}
-  .approval-mock .h .ic{width:22px; height:22px; border-radius:6px; background:rgba(94,184,255,.14); display:flex; align-items:center; justify-content:center; color:var(--accent2); font-size:12px}
   .approval-mock .who{font-size:12.5px; color:var(--dim); margin-bottom:14px}
   .approval-mock .cmdbox{
     font-family:var(--mono); font-size:12.5px; background:var(--bg2); border:1px solid var(--line);
@@ -102,7 +110,7 @@
   .approval-mock .row{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .approval-mock button{
     font-size:12.5px; padding:9px 0; border-radius:7px; border:1px solid var(--line); background:var(--panel2);
-    color:var(--text); font-weight:600; cursor:default;
+    color:var(--text); font-weight:600; cursor:default; font-family:var(--sans);
   }
   .approval-mock button.allow{background:rgba(78,225,160,.14); border-color:rgba(78,225,160,.4); color:var(--accent)}
   .approval-mock button.deny{background:rgba(255,107,107,.1); border-color:rgba(255,107,107,.35); color:var(--danger)}
@@ -192,7 +200,7 @@
   .wl-form input:focus{outline:none; border-color:var(--accent)}
   .wl-form button{
     background:var(--accent); color:#052014; border:none; border-radius:9px; padding:12px 20px;
-    font-weight:700; font-size:14.5px; cursor:pointer;
+    font-weight:700; font-size:14.5px; cursor:pointer; font-family:var(--sans);
   }
   .wl-msg{font-size:13.5px; color:var(--dim); min-height:20px; margin-top:6px}
   .wl-msg.ok{color:var(--accent)}
@@ -224,29 +232,33 @@
   <div class="nav">
     <a class="brand" href="#top"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#052014" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v9"/><path d="M8 12.5 6.5 11a1.5 1.5 0 0 0-2.3 1.9L7 17a6 6 0 0 0 5 3h2a6 6 0 0 0 6-6v-3"/></svg></span> MacHands</a>
     <nav class="navlinks">
-      <a href="#how">How it works</a>
-      <a href="#features">Features</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#faq">FAQ</a>
+      <a href="#how" data-i18n="nav.how">How it works</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#pricing" data-i18n="nav.pricing">Pricing</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
     </nav>
-    <a class="cta" href="#get">Get MacHands</a>
+    <div class="langsw" id="langsw">
+      <button data-lang="en">EN</button>
+      <button data-lang="zh">中文</button>
+    </div>
+    <a class="cta" href="#get" data-i18n="nav.cta">Get MacHands</a>
   </div>
 </header>
 
 <div id="top" class="hero">
   <div class="wrap">
-    <span class="eyebrow"><span class="dot"></span> for Claude Code · Codex · Cursor · any MCP-capable agent</span>
-    <h1>Give your cloud AI<br>agent <span class="grad">hands on your Mac.</span></h1>
-    <p class="lead">
+    <span class="eyebrow"><span class="dot"></span> <span data-i18n="hero.eyebrow">for Claude Code · Codex · Cursor · any MCP-capable agent</span></span>
+    <h1 data-i18n-html="hero.title">Give your cloud AI<br>agent <span class="grad">hands on your Mac.</span></h1>
+    <p class="lead" data-i18n="hero.lead">
       Your coding agent runs on a server. Xcode, the iOS Simulator, Safari, and code signing
       don't. MacHands lets it build, test, screenshot, and run commands on the Mac you already
       own — end-to-end encrypted, and nothing runs without you saying yes.
     </p>
     <div class="hero-ctas">
-      <a class="btn-primary" href="#get">↓ Download for macOS</a>
-      <a class="btn-secondary" href="#how">See how it works</a>
+      <a class="btn-primary" href="#get"><span data-i18n="hero.cta1">↓ Download for macOS</span></a>
+      <a class="btn-secondary" href="#how" data-i18n="hero.cta2">See how it works</a>
     </div>
-    <div class="fineprint">macOS 13+ · Apple Silicon &amp; Intel · 7-day free trial · not an Apple, Anthropic, OpenAI or xAI product</div>
+    <div class="fineprint" data-i18n="hero.fine">macOS 13+ · Apple Silicon &amp; Intel · 7-day free trial · not an Apple, Anthropic, OpenAI or xAI product</div>
 
     <div class="termcard">
       <div class="termbar">
@@ -254,10 +266,10 @@
         <span class="title">agent — zsh</span>
       </div>
       <div class="termbody"><span class="prompt">$</span> <span class="cmd">npx -y machands@latest pair "MH1.relay.example…"</span>
-<div class="out">connecting to relay …
+<div class="out" data-i18n-html="hero.term1">connecting to relay …
 paired with <span class="ok">Kai's MacBook Pro</span> ✓</div>
 <span class="prompt">$</span> <span class="cmd">machands run -- xcodebuild -scheme App -destination "platform=iOS Simulator,name=iPhone 16" test</span>
-<div class="out">waiting for approval on the Mac …
+<div class="out" data-i18n-html="hero.term2">waiting for approval on the Mac …
 <span class="ok">approved once</span> — running
 Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
     </div>
@@ -266,36 +278,36 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section id="how">
   <div class="wrap">
-    <div class="kicker">HOW IT WORKS</div>
-    <h2>Three steps. No SSH, no terminal on your side.</h2>
-    <p class="section-lead">Everything your agent needs to connect is in one block of text you copy once.</p>
+    <div class="kicker" data-i18n="how.kicker">HOW IT WORKS</div>
+    <h2 data-i18n="how.title">Three steps. No SSH, no terminal on your side.</h2>
+    <p class="section-lead" data-i18n="how.lead">Everything your agent needs to connect is in one block of text you copy once.</p>
     <div class="steps">
       <div class="step">
         <div class="num">1</div>
-        <h3>Open MacHands</h3>
-        <p>A small menu bar app. It generates this Mac's identity and connects to the relay — nothing to configure.</p>
+        <h3 data-i18n="how.1.title">Open MacHands</h3>
+        <p data-i18n="how.1.body">A small menu bar app. It generates this Mac's identity and connects to the relay — nothing to configure.</p>
       </div>
       <div class="step">
         <div class="num">2</div>
-        <h3>Copy, paste to your agent</h3>
-        <p>Click "Copy for agent." Paste the text into Claude Code, Codex, or Cursor. The agent runs the one command inside it.</p>
+        <h3 data-i18n="how.2.title">Copy, paste to your agent</h3>
+        <p data-i18n="how.2.body">Click "Copy for agent." Paste the text into Claude Code, Codex, or Cursor. The agent runs the one command inside it.</p>
       </div>
       <div class="step">
         <div class="num">3</div>
-        <h3>Approve what it does</h3>
-        <p>Each command shows up as a card on your Mac: allow once, allow for an hour, always allow, or deny. You're always in control.</p>
+        <h3 data-i18n="how.3.title">Approve what it does</h3>
+        <p data-i18n="how.3.body">Each command shows up as a card on your Mac: allow once, allow for an hour, always allow, or deny. You're always in control.</p>
       </div>
     </div>
 
     <div class="approval-mock">
-      <div class="h"><span class="badge-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v9"/><path d="M8 12.5 6.5 11a1.5 1.5 0 0 0-2.3 1.9L7 17a6 6 0 0 0 5 3h2a6 6 0 0 0 6-6v-3"/></svg></span> MacHands wants to run a command</div>
-      <div class="who">from Claude@cloud-vps · 2s ago</div>
+      <div class="h"><span class="badge-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v9"/><path d="M8 12.5 6.5 11a1.5 1.5 0 0 0-2.3 1.9L7 17a6 6 0 0 0 5 3h2a6 6 0 0 0 6-6v-3"/></svg></span> <span data-i18n="mock.title">MacHands wants to run a command</span></div>
+      <div class="who" data-i18n="mock.who">from Claude@cloud-vps · 2s ago</div>
       <div class="cmdbox">xcodebuild -scheme App -destination "platform=iOS Simulator,name=iPhone 16" test</div>
       <div class="row">
-        <button class="allow">Allow once</button>
-        <button>Allow 1 hour</button>
-        <button>Always allow this</button>
-        <button class="deny">Deny</button>
+        <button class="allow" data-i18n="mock.once">Allow once</button>
+        <button data-i18n="mock.hour">Allow 1 hour</button>
+        <button data-i18n="mock.always">Always allow this</button>
+        <button class="deny" data-i18n="mock.deny">Deny</button>
       </div>
     </div>
   </div>
@@ -303,39 +315,39 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section id="features" style="background:var(--bg2); border-top:1px solid var(--line); border-bottom:1px solid var(--line)">
   <div class="wrap">
-    <div class="kicker">WHAT YOU GET</div>
-    <h2>Built for handing real control to an agent, safely.</h2>
-    <p class="section-lead">Not a screen-sharing tool. Not a bare SSH tunnel. A purpose-built bridge with a gate on every action.</p>
+    <div class="kicker" data-i18n="feat.kicker">WHAT YOU GET</div>
+    <h2 data-i18n="feat.title">Built for handing real control to an agent, safely.</h2>
+    <p class="section-lead" data-i18n="feat.lead">Not a screen-sharing tool. Not a bare SSH tunnel. A purpose-built bridge with a gate on every action.</p>
     <div class="grid3">
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="15.5" r="1.4" fill="currentColor" stroke="none"/></svg></div>
-        <h3>End-to-end encrypted</h3>
-        <p>X25519 + ChaCha20-Poly1305 between your agent and your Mac. The relay only ever sees ciphertext, even the one we host.</p>
+        <h3 data-i18n="feat.1.title">End-to-end encrypted</h3>
+        <p data-i18n="feat.1.body">X25519 + ChaCha20-Poly1305 between your agent and your Mac. The relay only ever sees ciphertext, even the one we host.</p>
       </div>
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v5.2c0 4.4 3 7.9 7.5 9.3 4.5-1.4 7.5-4.9 7.5-9.3V6L12 3Z"/><path d="m9 12 2 2 4-4.2"/></svg></div>
-        <h3>A gate on every command</h3>
-        <p>Ask-every-time by default. Approve once, for an hour, or always for that exact command. A denylist blocks the dangerous stuff even in automatic mode.</p>
+        <h3 data-i18n="feat.2.title">A gate on every command</h3>
+        <p data-i18n="feat.2.body">Ask-every-time by default. Approve once, for an hour, or always for that exact command. A denylist blocks the dangerous stuff even in automatic mode.</p>
       </div>
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5 5L4 17l3 3 5.7-5.7a4 4 0 0 1 5-5L21 6l-3-3-3.3 3.3Z"/></svg></div>
-        <h3>Xcode &amp; Simulator, for real</h3>
-        <p>xcodebuild, the iOS Simulator, code signing, Safari — the things a cloud sandbox physically cannot run, run on your actual Mac.</p>
+        <h3 data-i18n="feat.3.title">Xcode &amp; Simulator, for real</h3>
+        <p data-i18n="feat.3.body">xcodebuild, the iOS Simulator, code signing, Safari — the things a cloud sandbox physically cannot run, run on your actual Mac.</p>
       </div>
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="12" rx="2"/><path d="m3.5 14 4.5-4 3.5 3 3-2.5L20.5 14"/><circle cx="8" cy="9" r="1.1" fill="currentColor" stroke="none"/></svg></div>
-        <h3>Screenshots on demand</h3>
-        <p>Let your agent see what it built. One call captures the screen so it can check its own UI work instead of guessing.</p>
+        <h3 data-i18n="feat.4.title">Screenshots on demand</h3>
+        <p data-i18n="feat.4.body">Let your agent see what it built. One call captures the screen so it can check its own UI work instead of guessing.</p>
       </div>
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4"/><rect x="6" y="7" width="12" height="7" rx="2"/><path d="M12 14v3a3 3 0 0 0 3 3h1"/></svg></div>
-        <h3>MCP-ready</h3>
-        <p>One line adds it to Claude Code, Codex, or Cursor as an MCP server — <code>run</code>, <code>put</code>, <code>get</code>, <code>screenshot</code>, <code>open</code>, <code>clipboard</code>.</p>
+        <h3 data-i18n="feat.5.title">MCP-ready</h3>
+        <p data-i18n-html="feat.5.body">One line adds it to Claude Code, Codex, or Cursor as an MCP server — <code>run</code>, <code>put</code>, <code>get</code>, <code>screenshot</code>, <code>open</code>, <code>clipboard</code>.</p>
       </div>
       <div class="feature">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h9l3 3v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M14 4v3h3M8.5 12h6M8.5 15h6M8.5 9h3"/></svg></div>
-        <h3>Full audit log</h3>
-        <p>Every command and every decision — yours and the agent's — written to a local JSONL log you can review or ship anywhere.</p>
+        <h3 data-i18n="feat.6.title">Full audit log</h3>
+        <p data-i18n="feat.6.body">Every command and every decision — yours and the agent's — written to a local JSONL log you can review or ship anywhere.</p>
       </div>
     </div>
 
@@ -343,30 +355,30 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       <div class="dnode">
         <div class="dbox">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><circle cx="7" cy="7" r=".6" fill="currentColor" stroke="none"/><circle cx="7" cy="17" r=".6" fill="currentColor" stroke="none"/></svg>
-          <div class="dtitle">Your agent</div>
+          <div class="dtitle" data-i18n="diag.agent.title">Your agent</div>
           <div class="dsub">Claude Code · Codex · Cursor</div>
         </div>
       </div>
       <div class="dlink">
         <svg viewBox="0 0 70 14" preserveAspectRatio="none"><line x1="0" y1="7" x2="70" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 4"/></svg>
-        <span class="dlabel">encrypted</span>
+        <span class="dlabel" data-i18n="diag.encrypted">encrypted</span>
       </div>
       <div class="dnode">
         <div class="dbox">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17"/></svg>
-          <div class="dtitle">Relay</div>
-          <div class="dsub">forwards ciphertext only</div>
+          <div class="dtitle" data-i18n="diag.relay.title">Relay</div>
+          <div class="dsub" data-i18n="diag.relay.sub">forwards ciphertext only</div>
         </div>
       </div>
       <div class="dlink">
         <svg viewBox="0 0 70 14" preserveAspectRatio="none"><line x1="0" y1="7" x2="70" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 4"/></svg>
-        <span class="dlabel">encrypted</span>
+        <span class="dlabel" data-i18n="diag.encrypted">encrypted</span>
       </div>
       <div class="dnode you">
         <div class="dbox">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="10.5" rx="1.3"/><path d="M2 19h20l-1.6-2.5H3.6L2 19Z"/></svg>
-          <div class="dtitle">Your Mac</div>
-          <div class="dsub">executes, after you say yes</div>
+          <div class="dtitle" data-i18n="diag.mac.title">Your Mac</div>
+          <div class="dsub" data-i18n="diag.mac.sub">executes, after you say yes</div>
         </div>
       </div>
     </div>
@@ -375,17 +387,17 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section>
   <div class="wrap">
-    <div class="kicker">WHY NOT JUST RENT A MAC</div>
-    <h2>Your Mac, not a rented one.</h2>
-    <p class="section-lead">Mac-in-the-cloud services solve the same problem by billing you monthly for hardware you already own.</p>
+    <div class="kicker" data-i18n="cmp.kicker">WHY NOT JUST RENT A MAC</div>
+    <h2 data-i18n="cmp.title">Your Mac, not a rented one.</h2>
+    <p class="section-lead" data-i18n="cmp.lead">Mac-in-the-cloud services solve the same problem by billing you monthly for hardware you already own.</p>
     <div class="compare-wrap">
       <table class="compare">
-        <tr><th></th><th>MacHands</th><th>Cloud Mac rental</th><th>Bare SSH tunnel</th></tr>
-        <tr><td>Cost</td><td class="you">$49 once</td><td>$20–250 / month</td><td>free, DIY</td></tr>
-        <tr><td>Uses hardware you own</td><td class="you">Yes</td><td>No</td><td>Yes</td></tr>
-        <tr><td>Per-command approval</td><td class="you">Built in</td><td>No</td><td>No</td></tr>
-        <tr><td>End-to-end encrypted</td><td class="you">Yes</td><td>Varies</td><td>Transport only</td></tr>
-        <tr><td>Setup</td><td class="you">Copy, paste</td><td>Account, billing</td><td>Enable Remote Login, keys, ports</td></tr>
+        <tr><th></th><th>MacHands</th><th data-i18n="cmp.h2">Cloud Mac rental</th><th data-i18n="cmp.h3">Bare SSH tunnel</th></tr>
+        <tr><td data-i18n="cmp.r1">Cost</td><td class="you" data-i18n="cmp.r1.a">$49 once</td><td data-i18n="cmp.r1.b">$20–250 / month</td><td data-i18n="cmp.r1.c">free, DIY</td></tr>
+        <tr><td data-i18n="cmp.r2">Uses hardware you own</td><td class="you" data-i18n="cmp.yes">Yes</td><td data-i18n="cmp.no">No</td><td data-i18n="cmp.yes">Yes</td></tr>
+        <tr><td data-i18n="cmp.r3">Per-command approval</td><td class="you" data-i18n="cmp.builtin">Built in</td><td data-i18n="cmp.no">No</td><td data-i18n="cmp.no">No</td></tr>
+        <tr><td data-i18n="cmp.r4">End-to-end encrypted</td><td class="you" data-i18n="cmp.yes">Yes</td><td data-i18n="cmp.varies">Varies</td><td data-i18n="cmp.transport">Transport only</td></tr>
+        <tr><td data-i18n="cmp.r5">Setup</td><td class="you" data-i18n="cmp.r5.a">Copy, paste</td><td data-i18n="cmp.r5.b">Account, billing</td><td data-i18n="cmp.r5.c">Enable Remote Login, keys, ports</td></tr>
       </table>
     </div>
   </div>
@@ -393,33 +405,33 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section id="pricing" style="background:var(--bg2); border-top:1px solid var(--line); border-bottom:1px solid var(--line)">
   <div class="wrap">
-    <div class="kicker">PRICING</div>
-    <h2>Buy once. Keep it.</h2>
-    <p class="section-lead">No subscription. A license covers one Mac and includes a year of updates.</p>
+    <div class="kicker" data-i18n="price.kicker">PRICING</div>
+    <h2 data-i18n="price.title">Buy once. Keep it.</h2>
+    <p class="section-lead" data-i18n="price.lead">No subscription. A license covers one Mac and includes a year of updates.</p>
     <div class="pricing">
       <div class="price-card">
-        <div class="tag">FREE TRIAL</div>
-        <h3>Try it</h3>
+        <div class="tag" data-i18n="price.trial.tag">FREE TRIAL</div>
+        <h3 data-i18n="price.trial.title">Try it</h3>
         <div class="amt">$0</div>
         <ul>
-          <li>Full functionality for 7 days</li>
-          <li>Connect any number of agents</li>
-          <li>Use the hosted relay or your own</li>
-          <li>No credit card to start</li>
+          <li data-i18n="price.trial.1">Full functionality for 7 days</li>
+          <li data-i18n="price.trial.2">Connect any number of agents</li>
+          <li data-i18n="price.trial.3">Use the hosted relay or your own</li>
+          <li data-i18n="price.trial.4">No credit card to start</li>
         </ul>
-        <a class="btn-secondary" href="#get" style="display:block; text-align:center">Download</a>
+        <a class="btn-secondary" href="#get" style="display:block; text-align:center" data-i18n="price.trial.cta">Download</a>
       </div>
       <div class="price-card hi">
-        <div class="tag">LICENSE</div>
+        <div class="tag" data-i18n="price.lic.tag">LICENSE</div>
         <h3>MacHands</h3>
-        <div class="amt">$49 <span>one time</span></div>
+        <div class="amt">$49 <span data-i18n="price.lic.once">one time</span></div>
         <ul>
-          <li>One Mac, yours to keep</li>
-          <li>A year of updates included</li>
-          <li>Apple Silicon &amp; Intel, universal binary</li>
-          <li>Priority email support</li>
+          <li data-i18n="price.lic.1">One Mac, yours to keep</li>
+          <li data-i18n="price.lic.2">A year of updates included</li>
+          <li data-i18n="price.lic.3">Apple Silicon &amp; Intel, universal binary</li>
+          <li data-i18n="price.lic.4">Priority email support</li>
         </ul>
-        <a class="btn-primary" href="#get" style="display:block; text-align:center">Join early access</a>
+        <a class="btn-primary" href="#get" style="display:block; text-align:center" data-i18n="price.lic.cta">Join early access</a>
       </div>
     </div>
   </div>
@@ -428,14 +440,14 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 <section id="get">
   <div class="wrap">
     <div class="waitlist">
-      <h2>Checkout isn't open yet</h2>
-      <p class="section-lead" style="margin:0 auto">
+      <h2 data-i18n="wl.title">Checkout isn't open yet</h2>
+      <p class="section-lead" style="margin:0 auto" data-i18n="wl.lead">
         MacHands is finishing notarization. Leave your email and we'll send the signed download
         and a license the moment it's live — no spam, one email.
       </p>
       <form class="wl-form" id="wlForm">
         <input type="email" id="wlEmail" placeholder="you@example.com" required>
-        <button type="submit">Notify me</button>
+        <button type="submit" data-i18n="wl.submit">Notify me</button>
       </form>
       <div class="wl-msg" id="wlMsg"></div>
     </div>
@@ -444,32 +456,32 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section id="faq">
   <div class="wrap">
-    <div class="kicker">FAQ</div>
-    <h2>Questions</h2>
+    <div class="kicker" data-i18n="faq.kicker">FAQ</div>
+    <h2 data-i18n="faq.title">Questions</h2>
     <div class="faq">
       <details>
-        <summary>Do I need to turn on Remote Login / SSH?</summary>
-        <p>No. MacHands runs the commands itself as a normal app — there's no SSH server exposed on your Mac at any point.</p>
+        <summary data-i18n="faq.1.q">Do I need to turn on Remote Login / SSH?</summary>
+        <p data-i18n="faq.1.a">No. MacHands runs the commands itself as a normal app — there's no SSH server exposed on your Mac at any point.</p>
       </details>
       <details>
-        <summary>Is my code or data visible to the relay?</summary>
-        <p>No. Every message between your agent and your Mac is encrypted end-to-end (X25519 key exchange, ChaCha20-Poly1305). The relay — ours or your own — only ever forwards ciphertext.</p>
+        <summary data-i18n="faq.2.q">Is my code or data visible to the relay?</summary>
+        <p data-i18n="faq.2.a">No. Every message between your agent and your Mac is encrypted end-to-end (X25519 key exchange, ChaCha20-Poly1305). The relay — ours or your own — only ever forwards ciphertext.</p>
       </details>
       <details>
-        <summary>Does it work on Intel Macs?</summary>
-        <p>Yes. MacHands ships as a universal binary that runs natively on both Apple Silicon and Intel, macOS 13 and later.</p>
+        <summary data-i18n="faq.3.q">Does it work on Intel Macs?</summary>
+        <p data-i18n="faq.3.a">Yes. MacHands ships as a universal binary that runs natively on both Apple Silicon and Intel, macOS 13 and later.</p>
       </details>
       <details>
-        <summary>Can I self-host the relay instead of using yours?</summary>
-        <p>Yes. The relay is a small open Node process you can run on your own server in a few commands; point the app at it in Settings.</p>
+        <summary data-i18n="faq.4.q">Can I self-host the relay instead of using yours?</summary>
+        <p data-i18n="faq.4.a">Yes. The relay is a small open Node process you can run on your own server in a few commands; point the app at it in Settings.</p>
       </details>
       <details>
-        <summary>What can the agent actually do on my Mac?</summary>
-        <p>Run shell commands, read/write files, take screenshots, open URLs, and read/write the clipboard — each gated by your approval settings. You choose ask-every-time or automatic-with-a-denylist, per agent.</p>
+        <summary data-i18n="faq.5.q">What can the agent actually do on my Mac?</summary>
+        <p data-i18n="faq.5.a">Run shell commands, read/write files, take screenshots, open URLs, and read/write the clipboard — each gated by your approval settings. You choose ask-every-time or automatic-with-a-denylist, per agent.</p>
       </details>
       <details>
-        <summary>Is this an Apple, Anthropic, OpenAI, or xAI product?</summary>
-        <p>No. MacHands is an independent, third-party tool. It works with Claude Code, Codex, Cursor, and anything else that can run a command or speak MCP.</p>
+        <summary data-i18n="faq.6.q">Is this an Apple, Anthropic, OpenAI, or xAI product?</summary>
+        <p data-i18n="faq.6.a">No. MacHands is an independent, third-party tool. It works with Claude Code, Codex, Cursor, and anything else that can run a command or speak MCP.</p>
       </details>
     </div>
   </div>
@@ -478,15 +490,15 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 <footer>
   <div class="wrap">
     <div class="foot-top">
-      <a class="brand" href="#top"><span class="mark">✋</span> MacHands</a>
+      <a class="brand" href="#top"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#052014" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M8 13V6a1.5 1.5 0 0 1 3 0v5"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11.5V6a1.5 1.5 0 0 1 3 0v9"/><path d="M8 12.5 6.5 11a1.5 1.5 0 0 0-2.3 1.9L7 17a6 6 0 0 0 5 3h2a6 6 0 0 0 6-6v-3"/></svg></span> MacHands</a>
       <nav style="display:flex; gap:22px">
-        <a href="#how">How it works</a>
-        <a href="#pricing">Pricing</a>
-        <a href="#faq">FAQ</a>
-        <a href="mailto:hello@machands.app">Contact</a>
+        <a href="#how" data-i18n="nav.how">How it works</a>
+        <a href="#pricing" data-i18n="nav.pricing">Pricing</a>
+        <a href="#faq" data-i18n="nav.faq">FAQ</a>
+        <a href="mailto:hello@machands.app" data-i18n="foot.contact">Contact</a>
       </nav>
     </div>
-    <p class="disclaimer">
+    <p class="disclaimer" data-i18n="foot.disclaimer">
       MacHands is an independent, third-party developer tool and is not affiliated with, endorsed by, or
       sponsored by Apple Inc., Anthropic, OpenAI, or xAI. macOS, Xcode, and the iOS Simulator are trademarks
       of Apple Inc. Claude and Claude Code are trademarks of Anthropic. © 2026 MacHands.
@@ -495,6 +507,145 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 </footer>
 
 <script>
+  const DICT = {
+    en: {
+      "nav.how":"How it works","nav.features":"Features","nav.pricing":"Pricing","nav.faq":"FAQ","nav.cta":"Get MacHands",
+      "hero.eyebrow":"for Claude Code · Codex · Cursor · any MCP-capable agent",
+      "hero.title":'Give your cloud AI<br>agent <span class="grad">hands on your Mac.</span>',
+      "hero.lead":"Your coding agent runs on a server. Xcode, the iOS Simulator, Safari, and code signing don't. MacHands lets it build, test, screenshot, and run commands on the Mac you already own — end-to-end encrypted, and nothing runs without you saying yes.",
+      "hero.cta1":"↓ Download for macOS","hero.cta2":"See how it works",
+      "hero.fine":"macOS 13+ · Apple Silicon &amp; Intel · 7-day free trial · not an Apple, Anthropic, OpenAI or xAI product",
+      "hero.term1":'connecting to relay …\npaired with <span class="ok">Kai\'s MacBook Pro</span> ✓',
+      "hero.term2":"waiting for approval on the Mac …\n<span class=\"ok\">approved once</span> — running\nTest Suite 'All tests' passed. Executed 42 tests, with 0 failures.",
+      "how.kicker":"HOW IT WORKS","how.title":"Three steps. No SSH, no terminal on your side.",
+      "how.lead":"Everything your agent needs to connect is in one block of text you copy once.",
+      "how.1.title":"Open MacHands","how.1.body":"A small menu bar app. It generates this Mac's identity and connects to the relay — nothing to configure.",
+      "how.2.title":"Copy, paste to your agent","how.2.body":'Click "Copy for agent." Paste the text into Claude Code, Codex, or Cursor. The agent runs the one command inside it.',
+      "how.3.title":"Approve what it does","how.3.body":"Each command shows up as a card on your Mac: allow once, allow for an hour, always allow, or deny. You're always in control.",
+      "mock.title":"MacHands wants to run a command","mock.who":"from Claude@cloud-vps · 2s ago",
+      "mock.once":"Allow once","mock.hour":"Allow 1 hour","mock.always":"Always allow this","mock.deny":"Deny",
+      "feat.kicker":"WHAT YOU GET","feat.title":"Built for handing real control to an agent, safely.",
+      "feat.lead":"Not a screen-sharing tool. Not a bare SSH tunnel. A purpose-built bridge with a gate on every action.",
+      "feat.1.title":"End-to-end encrypted","feat.1.body":"X25519 + ChaCha20-Poly1305 between your agent and your Mac. The relay only ever sees ciphertext, even the one we host.",
+      "feat.2.title":"A gate on every command","feat.2.body":"Ask-every-time by default. Approve once, for an hour, or always for that exact command. A denylist blocks the dangerous stuff even in automatic mode.",
+      "feat.3.title":"Xcode &amp; Simulator, for real","feat.3.body":"xcodebuild, the iOS Simulator, code signing, Safari — the things a cloud sandbox physically cannot run, run on your actual Mac.",
+      "feat.4.title":"Screenshots on demand","feat.4.body":"Let your agent see what it built. One call captures the screen so it can check its own UI work instead of guessing.",
+      "feat.5.title":"MCP-ready","feat.5.body":"One line adds it to Claude Code, Codex, or Cursor as an MCP server — <code>run</code>, <code>put</code>, <code>get</code>, <code>screenshot</code>, <code>open</code>, <code>clipboard</code>.",
+      "feat.6.title":"Full audit log","feat.6.body":"Every command and every decision — yours and the agent's — written to a local JSONL log you can review or ship anywhere.",
+      "diag.agent.title":"Your agent","diag.encrypted":"encrypted","diag.relay.title":"Relay","diag.relay.sub":"forwards ciphertext only",
+      "diag.mac.title":"Your Mac","diag.mac.sub":"executes, after you say yes",
+      "cmp.kicker":"WHY NOT JUST RENT A MAC","cmp.title":"Your Mac, not a rented one.",
+      "cmp.lead":"Mac-in-the-cloud services solve the same problem by billing you monthly for hardware you already own.",
+      "cmp.h2":"Cloud Mac rental","cmp.h3":"Bare SSH tunnel",
+      "cmp.r1":"Cost","cmp.r1.a":"$49 once","cmp.r1.b":"$20–250 / month","cmp.r1.c":"free, DIY",
+      "cmp.r2":"Uses hardware you own","cmp.r3":"Per-command approval","cmp.r4":"End-to-end encrypted",
+      "cmp.yes":"Yes","cmp.no":"No","cmp.builtin":"Built in","cmp.varies":"Varies","cmp.transport":"Transport only",
+      "cmp.r5":"Setup","cmp.r5.a":"Copy, paste","cmp.r5.b":"Account, billing","cmp.r5.c":"Enable Remote Login, keys, ports",
+      "price.kicker":"PRICING","price.title":"Buy once. Keep it.","price.lead":"No subscription. A license covers one Mac and includes a year of updates.",
+      "price.trial.tag":"FREE TRIAL","price.trial.title":"Try it",
+      "price.trial.1":"Full functionality for 7 days","price.trial.2":"Connect any number of agents",
+      "price.trial.3":"Use the hosted relay or your own","price.trial.4":"No credit card to start","price.trial.cta":"Download",
+      "price.lic.tag":"LICENSE","price.lic.once":"one time",
+      "price.lic.1":"One Mac, yours to keep","price.lic.2":"A year of updates included",
+      "price.lic.3":"Apple Silicon &amp; Intel, universal binary","price.lic.4":"Priority email support","price.lic.cta":"Join early access",
+      "wl.title":"Checkout isn't open yet",
+      "wl.lead":"MacHands is finishing notarization. Leave your email and we'll send the signed download and a license the moment it's live — no spam, one email.",
+      "wl.submit":"Notify me",
+      "faq.kicker":"FAQ","faq.title":"Questions",
+      "faq.1.q":"Do I need to turn on Remote Login / SSH?","faq.1.a":"No. MacHands runs the commands itself as a normal app — there's no SSH server exposed on your Mac at any point.",
+      "faq.2.q":"Is my code or data visible to the relay?","faq.2.a":"No. Every message between your agent and your Mac is encrypted end-to-end (X25519 key exchange, ChaCha20-Poly1305). The relay — ours or your own — only ever forwards ciphertext.",
+      "faq.3.q":"Does it work on Intel Macs?","faq.3.a":"Yes. MacHands ships as a universal binary that runs natively on both Apple Silicon and Intel, macOS 13 and later.",
+      "faq.4.q":"Can I self-host the relay instead of using yours?","faq.4.a":"Yes. The relay is a small open Node process you can run on your own server in a few commands; point the app at it in Settings.",
+      "faq.5.q":"What can the agent actually do on my Mac?","faq.5.a":"Run shell commands, read/write files, take screenshots, open URLs, and read/write the clipboard — each gated by your approval settings. You choose ask-every-time or automatic-with-a-denylist, per agent.",
+      "faq.6.q":"Is this an Apple, Anthropic, OpenAI, or xAI product?","faq.6.a":"No. MacHands is an independent, third-party tool. It works with Claude Code, Codex, Cursor, and anything else that can run a command or speak MCP.",
+      "foot.contact":"Contact",
+      "foot.disclaimer":"MacHands is an independent, third-party developer tool and is not affiliated with, endorsed by, or sponsored by Apple Inc., Anthropic, OpenAI, or xAI. macOS, Xcode, and the iOS Simulator are trademarks of Apple Inc. Claude and Claude Code are trademarks of Anthropic. © 2026 MacHands."
+    },
+    zh: {
+      "nav.how":"使用方法","nav.features":"功能","nav.pricing":"价格","nav.faq":"常见问题","nav.cta":"获取 MacHands",
+      "hero.eyebrow":"适配 Claude Code · Codex · Cursor · 任何支持 MCP 的 agent",
+      "hero.title":'给你的云端 AI<br><span class="grad">agent 一双 Mac 上的手。</span>',
+      "hero.lead":"你的编程 agent 跑在服务器上,而 Xcode、iOS 模拟器、Safari、代码签名都不在服务器上。MacHands 让它在你自己的 Mac 上编译、测试、截屏、执行命令——端到端加密,且没有你点头就什么都不会跑。",
+      "hero.cta1":"↓ 下载 macOS 版","hero.cta2":"看看怎么用",
+      "hero.fine":"macOS 13 及以上 · 支持 Apple Silicon 与 Intel · 7 天免费试用 · 与 Apple、Anthropic、OpenAI、xAI 均无关联",
+      "hero.term1":'正在连接中继…\n已与 <span class="ok">Kai 的 MacBook Pro</span> 配对 ✓',
+      "hero.term2":"等待 Mac 上的批准…\n<span class=\"ok\">已批准一次</span> — 正在运行\n测试套件「全部测试」通过。共执行 42 个测试,0 个失败。",
+      "how.kicker":"使用方法","how.title":"三步搞定。你这边不需要 SSH,不需要终端。",
+      "how.lead":"agent 接入所需要的一切,都在你复制一次的那段文字里。",
+      "how.1.title":"打开 MacHands","how.1.body":"一个小巧的菜单栏应用。它会生成这台 Mac 的身份并连接中继——不需要任何配置。",
+      "how.2.title":"复制,贴给你的 agent","how.2.body":"点击「复制给 agent」,把文字贴进 Claude Code、Codex 或 Cursor。agent 会执行里面那一行命令。",
+      "how.3.title":"批准它要做的事","how.3.body":"每条命令都会在你的 Mac 上弹出一张卡片:允许一次、允许一小时、总是允许,或者拒绝。主动权始终在你手上。",
+      "mock.title":"MacHands 想执行一条命令","mock.who":"来自 Claude@cloud-vps · 2 秒前",
+      "mock.once":"允许一次","mock.hour":"允许 1 小时","mock.always":"总是允许这条","mock.deny":"拒绝",
+      "feat.kicker":"你会得到什么","feat.title":"为安全地把真实控制权交给 agent 而设计。",
+      "feat.lead":"不是屏幕共享工具,也不是裸的 SSH 隧道,而是一座每一步都设了闸门的专用桥。",
+      "feat.1.title":"端到端加密","feat.1.body":"你的 agent 与 Mac 之间用 X25519 + ChaCha20-Poly1305 加密。中继——包括我们自己托管的那台——只会看到密文。",
+      "feat.2.title":"每条命令都有闸门","feat.2.body":"默认逐条询问;可以允许一次、允许一小时,或对某条命令永久放行。黑名单在自动模式下依然生效。",
+      "feat.3.title":"真正能用 Xcode 和模拟器","feat.3.body":"xcodebuild、iOS 模拟器、代码签名、Safari——这些云端沙箱物理上跑不了的东西,都能在你真实的 Mac 上跑起来。",
+      "feat.4.title":"随时截屏","feat.4.body":"让 agent 看到自己做出来的东西。一次调用就能截屏,让它检查自己的界面成果,而不是靠猜。",
+      "feat.5.title":"支持 MCP","feat.5.body":"一行配置就能把它接进 Claude Code、Codex 或 Cursor 作为 MCP 服务器——<code>run</code>、<code>put</code>、<code>get</code>、<code>screenshot</code>、<code>open</code>、<code>clipboard</code>。",
+      "feat.6.title":"完整审计日志","feat.6.body":"每一条命令、每一次决定——不管是你的还是 agent 的——都写进本地的 JSONL 日志,随时可查、可导出。",
+      "diag.agent.title":"你的 agent","diag.encrypted":"加密传输","diag.relay.title":"中继","diag.relay.sub":"只转发密文",
+      "diag.mac.title":"你的 Mac","diag.mac.sub":"你点头之后才执行",
+      "cmp.kicker":"为什么不直接租一台 Mac","cmp.title":"用你自己的 Mac,而不是租来的。",
+      "cmp.lead":"云端 Mac 服务解决的是同一个问题,代价是让你为自己已经拥有的硬件按月付费。",
+      "cmp.h2":"云端 Mac 租用","cmp.h3":"裸 SSH 隧道",
+      "cmp.r1":"费用","cmp.r1.a":"49 美元,一次性","cmp.r1.b":"每月 20–250 美元","cmp.r1.c":"免费,自己搭",
+      "cmp.r2":"用的是你自己的硬件","cmp.r3":"逐条审批","cmp.r4":"端到端加密",
+      "cmp.yes":"支持","cmp.no":"不支持","cmp.builtin":"内置","cmp.varies":"因服务而异","cmp.transport":"仅传输层",
+      "cmp.r5":"配置成本","cmp.r5.a":"复制、粘贴","cmp.r5.b":"注册账号、绑定账单","cmp.r5.c":"开远程登录、配密钥、开端口",
+      "price.kicker":"价格","price.title":"买一次,一直用。","price.lead":"没有订阅。一份许可证对应一台 Mac,含一年更新。",
+      "price.trial.tag":"免费试用","price.trial.title":"先试试",
+      "price.trial.1":"7 天内功能完整","price.trial.2":"可连接任意数量的 agent",
+      "price.trial.3":"用我们托管的中继,或自建都行","price.trial.4":"开始不需要信用卡","price.trial.cta":"下载",
+      "price.lic.tag":"许可证","price.lic.once":"一次性",
+      "price.lic.1":"一台 Mac,永久使用","price.lic.2":"含一年更新","price.lic.3":"通用二进制,Apple Silicon 与 Intel 都支持","price.lic.4":"优先邮件支持","price.lic.cta":"加入早鸟名单",
+      "wl.title":"付费入口还没开放",
+      "wl.lead":"MacHands 正在完成苹果公证。留下邮箱,正式上线时我们会第一时间把签名版下载和许可证发给你——只发这一封,不会打扰你。",
+      "wl.submit":"提醒我",
+      "faq.kicker":"常见问题","faq.title":"常见问题",
+      "faq.1.q":"需要打开「远程登录」/ SSH 吗?","faq.1.a":"不需要。MacHands 自己作为一个普通应用执行命令,你的 Mac 上任何时候都不会暴露 SSH 服务。",
+      "faq.2.q":"我的代码或数据对中继可见吗?","faq.2.a":"不可见。agent 与你的 Mac 之间的每一条消息都端到端加密(X25519 密钥交换,ChaCha20-Poly1305)。中继——不管是我们的还是你自建的——只会转发密文。",
+      "faq.3.q":"支持 Intel 芯片的 Mac 吗?","faq.3.a":"支持。MacHands 是通用二进制,在 Apple Silicon 和 Intel 上都原生运行,支持 macOS 13 及以上。",
+      "faq.4.q":"可以自建中继而不用你们的吗?","faq.4.a":"可以。中继是一个很小的开放 Node 进程,几条命令就能部署在你自己的服务器上;在设置里把地址指过去就行。",
+      "faq.5.q":"agent 到底能在我的 Mac 上做什么?","faq.5.a":"执行 shell 命令、读写文件、截屏、打开网址、读写剪贴板——每一项都受你的审批设置约束。每个 agent 可以单独选逐条询问,或者自动放行加黑名单。",
+      "faq.6.q":"这是 Apple、Anthropic、OpenAI 或 xAI 的产品吗?","faq.6.a":"不是。MacHands 是独立的第三方工具。它能配合 Claude Code、Codex、Cursor,以及任何能执行命令或支持 MCP 的工具使用。",
+      "foot.contact":"联系我们",
+      "foot.disclaimer":"MacHands 是独立的第三方开发者工具,与 Apple Inc.、Anthropic、OpenAI、xAI 均无关联,未获得其认可或赞助。macOS、Xcode、iOS 模拟器是 Apple Inc. 的商标。Claude 与 Claude Code 是 Anthropic 的商标。© 2026 MacHands。"
+    }
+  };
+
+  function applyLang(lang) {
+    document.documentElement.lang = (lang === 'zh') ? 'zh-CN' : 'en';
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var v = DICT[lang][el.getAttribute('data-i18n')];
+      if (v !== undefined) el.textContent = v;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+      var v = DICT[lang][el.getAttribute('data-i18n-html')];
+      if (v !== undefined) el.innerHTML = v;
+    });
+    document.querySelectorAll('#langsw button').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-lang') === lang);
+    });
+    try { localStorage.setItem('mh_lang', lang); } catch (e) {}
+  }
+
+  (function initLang() {
+    var stored = null;
+    try { stored = localStorage.getItem('mh_lang'); } catch (e) {}
+    var lang = stored;
+    if (!lang) {
+      lang = (navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en';
+    }
+    applyLang(lang);
+  })();
+
+  document.getElementById('langsw').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-lang]');
+    if (btn) applyLang(btn.getAttribute('data-lang'));
+  });
+
   const form = document.getElementById('wlForm');
   const msg = document.getElementById('wlMsg');
   form.addEventListener('submit', async (e) => {
