@@ -83,7 +83,7 @@ if [ -z "$SIGN_ID" ]; then
 fi
 case "$SIGN_ID" in
   "Developer ID Application:"*) : ;;
-  *) warn "「$SIGN_ID」看起来不像 Developer ID Application 证书;公证很可能会被拒。" ;;
+  *) warn "「${SIGN_ID}」看起来不像 Developer ID Application 证书;公证很可能会被拒。" ;;
 esac
 if [ "$SKIP_NOTARIZE" = 0 ] && [ -z "$KEYCHAIN_PROFILE" ]; then
   die 2 "缺 --keychain-profile。" \
@@ -93,7 +93,7 @@ command -v xcrun >/dev/null 2>&1 || die 5 "没有 xcrun。" "装 Xcode 命令行
 command -v hdiutil >/dev/null 2>&1 || die 1 "没有 hdiutil(这真的是 macOS 吗?)"
 
 if ! security find-identity -v -p codesigning 2>/dev/null | grep -qF "$SIGN_ID"; then
-  die 4 "钥匙串里找不到「$SIGN_ID」这个证书。" \
+  die 4 "钥匙串里找不到「${SIGN_ID}」这个证书。" \
         "security find-identity -v -p codesigning 会列出所有可用的;名字要一字不差"
 fi
 ok "证书在,工具齐"
