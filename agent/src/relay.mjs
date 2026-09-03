@@ -23,6 +23,9 @@ export class RelayClient extends EventEmitter {
     this.attempt = 0
     this.presence = new Map()
     this.seq = 0
+    // EventEmitter 的规矩:'error' 没人听就直接抛。连不上中继是家常便饭,
+    // 不该把整个进程掀翻——错误照样从 connect() 的 Promise 出去。
+    this.on('error', () => {})
   }
 
   get url() {

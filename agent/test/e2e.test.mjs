@@ -143,6 +143,16 @@ test('端到端:Mac 离线时退出码 69', async (t) => {
   assert.match(r.err, /不在线/)
 })
 
+test('端到端:中继连不上时说清楚是连不上中继,退出码 69', async (t) => {
+  const { mac, env, relay } = await setupRig(t)
+  assert.equal((await cli(['pair', mac.code], env)).code, 0)
+  mac.close()
+  await relay.close() // 中继整个没了
+  const r = await cli(['info'], env)
+  assert.equal(r.code, 69)
+  assert.match(r.err, /连不上中继/)
+})
+
 test('CLI:--help 和 --version 不用连网', async (t) => {
   const home = mkdtempSync(join(tmpdir(), 'machands-e2e-help-'))
   t.after(() => rmSync(home, { recursive: true, force: true }))

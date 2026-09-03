@@ -93,6 +93,7 @@ function authVector(who, edKey, xKey, id, name, nonceB64u, ts, role) {
       edPub: C.b64u(edKey.pub),
       xPub: C.b64u(xKey.pub),
       name,
+      ts, // 必须带上:中继要用它验签,还要检查时钟偏差
       sig,
     },
     signed_payload: payload,
@@ -135,7 +136,11 @@ const vectors = {
     aad: 'utf8(from + ">" + to),from/to 是发送方与接收方的 id。',
     帧: 'body = base64url(nonce ‖ ciphertext ‖ tag16)。算法 ChaCha20-Poly1305(IETF,12 字节 nonce,16 字节 tag)。CryptoKit 的 ChaChaPoly.seal 输出 combined = nonce ‖ ct ‖ tag,与本格式逐字节相同。',
     签名: 'sig = base64url(Ed25519.sign(edPriv, utf8(canonicalJSON(payload))));canonicalJSON = 键按字典序升序、无空白、字符串按 JSON 转义。',
-    握手: 'relay 在 hello 里给 32 字节随机 nonce(base64url);客户端签 {id, nonce, ts} 三个键。ts 是毫秒时间戳整数。',
+    握手:
+      'relay 在 hello 里给 32 字节随机 nonce(base64url);客户端签 {id, nonce, ts} 三个键,并且要把 ts 原样放进 auth 消息里(relay 用它验签,同时拒绝偏差超过 5 分钟的时钟)。ts 是毫秒时间戳整数。',
+    中继身份:
+      'hello = {t:"hello", relayId, nonce, ts, ver:1, sig}。relayId 就是中继 Ed25519 公钥的 base64url,配对码里带的就是它;sig 是中继用自己的私钥签 {nonce, relayId, ts}。客户端拿配对码里的公钥 pin:relayId 对不上、或者 sig 验不过,立刻断开(可能是中间人)。',
+    端点: 'App 连 ws://<host>:<port>/v1/mac,CLI 连 /v1/agent;另有 GET /health 和 GET /install。',
     配对码:
       'MH1.<relayHost>:<port>.<relayPubkey>.<macId>.<macXPub>.<macEdPub>.<token>.<base64url(utf8(macName))>,字段用 "." 分隔。主机名里可能带点(IPv4),所以解析时从尾部数 6 个字段,第 1 个字段之后、尾部 6 个字段之前的一律拼回 host:port。',
   },

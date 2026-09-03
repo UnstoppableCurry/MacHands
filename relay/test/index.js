@@ -2,3 +2,4 @@
 // 让 `node --test relay/test agent/test` 这条命令能直接跑。
 import './handshake.test.mjs'
 import './pairing.test.mjs'
+import './reconnect.test.mjs'
