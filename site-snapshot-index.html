@@ -5,6 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MacHands — give your cloud AI agent hands on your Mac</title>
 <meta name="description" content="MacHands lets Claude Code, Codex, and Cursor build, test, screenshot, and run commands on your own Mac. End-to-end encrypted. Every command needs your OK.">
+
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#08090c">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MacHands">
+<meta property="og:title" content="MacHands — give your cloud AI agent hands on your Mac">
+<meta property="og:description" content="Claude Code, Codex, and Cursor can build, test, screenshot, and run commands on your own Mac. End-to-end encrypted. You still say when.">
+<meta property="og:image" content="http://134.199.230.126/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MacHands — give your cloud AI agent hands on your Mac">
+<meta name="twitter:description" content="Claude Code, Codex, and Cursor can build, test, screenshot, and run commands on your own Mac. End-to-end encrypted. You still say when.">
+<meta name="twitter:image" content="http://134.199.230.126/og-image.png">
+
 <style>
   :root{
     --bg:#08090c; --bg2:#0d0f14; --panel:#12141b; --panel2:#171a22;
@@ -191,9 +210,23 @@
   .price-card li{font-size:14px; color:var(--muted); display:flex; gap:10px; align-items:flex-start}
   .price-card li::before{content:"✓"; color:var(--accent); font-weight:700; flex-shrink:0}
 
-  .waitlist{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:40px; text-align:center}
-  .waitlist h2{margin-bottom:10px}
-  .wl-form{display:flex; gap:10px; max-width:420px; margin:26px auto 10px; flex-wrap:wrap; justify-content:center}
+  .dl-card{
+    background:var(--panel); border:1px solid rgba(78,225,160,.4); border-radius:16px; padding:44px;
+    text-align:center; background:linear-gradient(180deg, rgba(78,225,160,.06), var(--panel) 45%);
+  }
+  .dl-meta{font-family:var(--mono); font-size:12.5px; color:var(--dim); margin:14px 0 18px}
+  .dl-alt{font-size:13.5px; color:var(--muted)}
+  .dl-alt a{color:var(--accent2); text-decoration:underline; text-underline-offset:2px}
+  .prerelease{
+    display:flex; gap:12px; align-items:flex-start; margin-top:24px; padding:16px 18px;
+    background:rgba(255,180,84,.08); border:1px solid rgba(255,180,84,.3); border-radius:12px;
+    font-size:13.5px; color:var(--muted); text-align:left; max-width:640px; margin-left:auto; margin-right:auto;
+  }
+  .prerelease .dot2{color:var(--warn); font-weight:700; flex-shrink:0}
+  .waitlist{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px; text-align:center; margin-top:20px}
+  .waitlist h3{margin:0 0 6px; font-size:16px}
+  .waitlist p{color:var(--muted); font-size:13.5px; margin:0 auto; max-width:480px}
+  .wl-form{display:flex; gap:10px; max-width:420px; margin:20px auto 10px; flex-wrap:wrap; justify-content:center}
   .wl-form input{
     flex:1; min-width:220px; background:var(--bg2); border:1px solid var(--line); border-radius:9px;
     padding:12px 14px; color:var(--text); font-size:14.5px; font-family:var(--sans);
@@ -441,17 +474,59 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
 <section id="get">
   <div class="wrap">
+    <div class="kicker" data-i18n="dl.kicker">DOWNLOAD</div>
+    <h2 data-i18n="dl.title">Get MacHands</h2>
+    <p class="section-lead" data-i18n="dl.lead">Payment isn't wired up yet, so it's free to download and use during the trial while that's finished.</p>
+
+    <div class="dl-card">
+      <a class="btn-primary" href="/dl/MacHands-0.1.0.dmg" download style="justify-content:center; min-width:280px" data-i18n="dl.primary">↓ Download for macOS (Universal)</a>
+      <div class="dl-meta" data-i18n="dl.meta">Apple Silicon &amp; Intel · macOS 13+ · v0.1.0 · 2.6 MB</div>
+      <div class="dl-alt">
+        <span data-i18n="dl.altLabel">Smaller, single-architecture builds:</span>
+        <a href="/dl/MacHands-0.1.0-apple-silicon.dmg" data-i18n="dl.appleSilicon">Apple Silicon only</a>
+        <span>·</span>
+        <a href="/dl/MacHands-0.1.0-intel.dmg" data-i18n="dl.intel">Intel only</a>
+      </div>
+    </div>
+
+    <div class="prerelease">
+      <span class="dot2">●</span>
+      <span data-i18n="dl.prerelease">This build is pre-release: signed for testing but not yet notarized by Apple, so macOS shows a one-time warning on first open. It's a normal, safe step for software distributed outside the App Store before notarization — not a sign anything is wrong. See exactly what to click just below.</span>
+    </div>
+
     <div class="waitlist">
-      <h2 data-i18n="wl.title">Checkout isn't open yet</h2>
-      <p class="section-lead" style="margin:0 auto" data-i18n="wl.lead">
-        MacHands is finishing notarization. Leave your email and we'll send the signed download
-        and a license the moment it's live — no spam, one email.
-      </p>
+      <h3 data-i18n="wl.title2">Want the notarized version + a license by email instead?</h3>
+      <p data-i18n="wl.lead2">Leave your email and we'll send the fully notarized build and a license the moment checkout opens — one email, no spam.</p>
       <form class="wl-form" id="wlForm">
         <input type="email" id="wlEmail" placeholder="you@example.com" required>
         <button type="submit" data-i18n="wl.submit">Notify me</button>
       </form>
       <div class="wl-msg" id="wlMsg"></div>
+    </div>
+  </div>
+</section>
+
+<section id="install" style="background:var(--bg2); border-top:1px solid var(--line); border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="kicker" data-i18n="inst.kicker">INSTALL</div>
+    <h2 data-i18n="inst.title">Three minutes, once.</h2>
+    <p class="section-lead" data-i18n="inst.lead">Exactly what to click, in order.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <h3 data-i18n="inst.1.title">Open the .dmg, drag to Applications</h3>
+        <p data-i18n="inst.1.body">Double-click the downloaded file, then drag the MacHands icon onto the Applications shortcut in the window that opens.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3 data-i18n="inst.2.title">Right-click → Open (first time only)</h3>
+        <p data-i18n="inst.2.body">In Applications, right-click MacHands and choose Open, then confirm Open in the dialog. macOS only asks this once, because the build isn't notarized yet.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3 data-i18n="inst.3.title">Click "Copy for agent"</h3>
+        <p data-i18n="inst.3.body">A hand appears in your menu bar. Click it, click "Copy for agent," and paste the text to your cloud agent.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -551,9 +626,22 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       "price.lic.tag":"LICENSE","price.lic.once":"one time",
       "price.lic.1":"One Mac, yours to keep","price.lic.2":"A year of updates included",
       "price.lic.3":"Apple Silicon & Intel, universal binary","price.lic.4":"Priority email support","price.lic.cta":"Join early access",
-      "wl.title":"Checkout isn't open yet",
-      "wl.lead":"MacHands is finishing notarization. Leave your email and we'll send the signed download and a license the moment it's live — no spam, one email.",
+      "dl.kicker":"DOWNLOAD","dl.title":"Get MacHands",
+      "dl.lead":"Payment isn't wired up yet, so it's free to download and use during the trial while that's finished.",
+      "dl.primary":"↓ Download for macOS (Universal)",
+      "dl.meta":"Apple Silicon & Intel · macOS 13+ · v0.1.0 · 2.6 MB",
+      "dl.altLabel":"Smaller, single-architecture builds:","dl.appleSilicon":"Apple Silicon only","dl.intel":"Intel only",
+      "dl.prerelease":"This build is pre-release: signed for testing but not yet notarized by Apple, so macOS shows a one-time warning on first open. It's a normal, safe step for software distributed outside the App Store before notarization — not a sign anything is wrong. See exactly what to click just below.",
+      "wl.title2":"Want the notarized version + a license by email instead?",
+      "wl.lead2":"Leave your email and we'll send the fully notarized build and a license the moment checkout opens — one email, no spam.",
       "wl.submit":"Notify me",
+      "inst.kicker":"INSTALL","inst.title":"Three minutes, once.","inst.lead":"Exactly what to click, in order.",
+      "inst.1.title":"Open the .dmg, drag to Applications",
+      "inst.1.body":"Double-click the downloaded file, then drag the MacHands icon onto the Applications shortcut in the window that opens.",
+      "inst.2.title":"Right-click → Open (first time only)",
+      "inst.2.body":"In Applications, right-click MacHands and choose Open, then confirm Open in the dialog. macOS only asks this once, because the build isn't notarized yet.",
+      "inst.3.title":'Click "Copy for agent"',
+      "inst.3.body":'A hand appears in your menu bar. Click it, click "Copy for agent," and paste the text to your cloud agent.',
       "faq.kicker":"FAQ","faq.title":"Questions",
       "faq.1.q":"Do I need to turn on Remote Login / SSH?","faq.1.a":"No. MacHands runs the commands itself as a normal app — there's no SSH server exposed on your Mac at any point.",
       "faq.2.q":"Is my code or data visible to the relay?","faq.2.a":"No. Every message between your agent and your Mac is encrypted end-to-end (X25519 key exchange, ChaCha20-Poly1305). The relay — ours or your own — only ever forwards ciphertext.",
@@ -604,9 +692,22 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       "price.trial.3":"用我们托管的中继,或自建都行","price.trial.4":"开始不需要信用卡","price.trial.cta":"下载",
       "price.lic.tag":"许可证","price.lic.once":"一次性",
       "price.lic.1":"一台 Mac,永久使用","price.lic.2":"含一年更新","price.lic.3":"通用二进制,Apple Silicon 与 Intel 都支持","price.lic.4":"优先邮件支持","price.lic.cta":"加入早鸟名单",
-      "wl.title":"付费入口还没开放",
-      "wl.lead":"MacHands 正在完成苹果公证。留下邮箱,正式上线时我们会第一时间把签名版下载和许可证发给你——只发这一封,不会打扰你。",
+      "dl.kicker":"下载","dl.title":"获取 MacHands",
+      "dl.lead":"收款功能还没接通,所以在那之前免费下载、免费用完整试用期。",
+      "dl.primary":"↓ 下载 macOS 版(通用)",
+      "dl.meta":"支持 Apple Silicon 与 Intel · macOS 13 及以上 · v0.1.0 · 2.6 MB",
+      "dl.altLabel":"文件更小的单架构版本:","dl.appleSilicon":"仅 Apple Silicon","dl.intel":"仅 Intel",
+      "dl.prerelease":"这是预发布版:已签名可正常测试,但还没经过苹果公证,所以第一次打开 macOS 会弹一次警告。这是 App Store 之外的软件在公证前的正常步骤,不代表有问题。下面会写清楚具体点哪里。",
+      "wl.title2":"想要正式公证版 + 邮件发许可证?",
+      "wl.lead2":"留下邮箱,正式开放付费的那一刻,我们会把完整公证版和许可证发给你——只发这一封,不会打扰你。",
       "wl.submit":"提醒我",
+      "inst.kicker":"安装","inst.title":"三分钟,只需一次。","inst.lead":"该点哪里,按顺序说清楚。",
+      "inst.1.title":"打开 .dmg,拖进 Applications",
+      "inst.1.body":"双击下载好的文件,把弹出窗口里的 MacHands 图标拖到 Applications 快捷方式上。",
+      "inst.2.title":"右键 → 打开(只有第一次要这样)",
+      "inst.2.body":"在 Applications 里右键点 MacHands,选「打开」,弹窗里再确认一次「打开」。因为还没公证,macOS 只会问这一次。",
+      "inst.3.title":"点「复制给 agent」",
+      "inst.3.body":"菜单栏会出现一只手,点它,点「复制给 agent」,把文字贴给你的云端 agent。",
       "faq.kicker":"常见问题","faq.title":"常见问题",
       "faq.1.q":"需要打开「远程登录」/ SSH 吗?","faq.1.a":"不需要。MacHands 自己作为一个普通应用执行命令,你的 Mac 上任何时候都不会暴露 SSH 服务。",
       "faq.2.q":"我的代码或数据对中继可见吗?","faq.2.a":"不可见。agent 与你的 Mac 之间的每一条消息都端到端加密(X25519 密钥交换,ChaCha20-Poly1305)。中继——不管是我们的还是你自建的——只会转发密文。",
