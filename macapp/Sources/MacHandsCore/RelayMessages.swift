@@ -91,9 +91,19 @@ public struct SendMessage: Codable {
 
 public struct HelloMessage: Codable {
     public let relayId: String?
+    /// SPEC §2 说中继公钥要出现在配对块里,而 §4.1 的 hello 只列了 `relayId`。
+    /// 两个名字都收:有 `relayPub` 就用它,否则把 `relayId` 当公钥。
+    public let relayPub: String?
     public let nonce: String
     public let ts: Double
     public let ver: Int?
+
+    /// 配对块里那一段、也是要 pin 的那一段。
+    public var relayKey: String? {
+        if let key = relayPub, !key.isEmpty { return key }
+        if let key = relayId, !key.isEmpty { return key }
+        return nil
+    }
 }
 
 public struct OkMessage: Codable {

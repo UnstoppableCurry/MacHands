@@ -1,6 +1,6 @@
 import Foundation
 
-/// Result of a one-shot child process.
+/// 一次性子进程的结果。
 struct CommandResult {
     let status: Int32
     let stdout: String
@@ -12,9 +12,9 @@ struct CommandResult {
         return launchError == nil && !timedOut && status == 0
     }
 
-    /// The most useful single sentence to show a human.
+    /// 给人看的一句话。
     var complaint: String {
-        if let e = launchError { return e }
+        if let error = launchError { return error }
         if timedOut { return "timed out" }
         let trimmed = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
@@ -22,28 +22,53 @@ struct CommandResult {
         }
         return "exit status \(status)"
     }
+
+    var trimmedOut: String {
+        return stdout.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
-/// Blocking helper for short-lived children (ssh probes, launchctl, scutil).
+/// 短命子进程的阻塞帮手(sw_vers、sips、screencapture 之类)。
 ///
-/// Both pipes are drained on their own queues, so a chatty child can never
-/// deadlock us by filling a 64 KB pipe buffer. Foundation's `Process` reaps the
-/// child itself, so nothing is left as a zombie.
+/// 两根管子各自在自己的队列上抽干,所以话多的子进程填不满 64 KB 管道缓冲、
+/// 也就卡不死我们。**不要在主线程上调用它**:它会阻塞。
 ///
-/// Never call this on the main thread: it blocks.
+/// 长命的 `run`(要流式输出、要能中途超时杀掉)不走这里,见 Executor。
 enum Shell {
 
+    /// SPEC §5.1:PATH 前置这四段。
+    static let pathPrefix = "~/.grok/bin:~/.cargo/bin:/opt/homebrew/bin:/usr/local/bin"
+
+    static func expandedPathPrefix() -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return pathPrefix.replacingOccurrences(of: "~", with: home)
+    }
+
+    /// 子进程用的环境:继承当前环境,PATH 前置。
+    static func environment(extra: [String: String]? = nil) -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let existing = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        env["PATH"] = expandedPathPrefix() + ":" + existing
+        if let extra = extra {
+            for (key, value) in extra { env[key] = value }
+        }
+        return env
+    }
+
+    @discardableResult
     static func run(_ executable: String,
                     _ arguments: [String],
                     environment: [String: String]? = nil,
+                    currentDirectory: String? = nil,
                     standardInput: String? = nil,
                     timeout: TimeInterval = 20) -> CommandResult {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        if let environment = environment {
-            process.environment = environment
+        process.environment = environment ?? Shell.environment()
+        if let directory = currentDirectory {
+            process.currentDirectoryURL = URL(fileURLWithPath: directory)
         }
 
         let outPipe = Pipe()
@@ -64,8 +89,7 @@ enum Shell {
         do {
             try process.run()
         } catch {
-            return CommandResult(status: -1, stdout: "", stderr: "",
-                                 timedOut: false,
+            return CommandResult(status: -1, stdout: "", stderr: "", timedOut: false,
                                  launchError: "cannot run \(executable): \(error.localizedDescription)")
         }
 
@@ -78,7 +102,7 @@ enum Shell {
             lock.lock(); errData = data; lock.unlock()
         }
 
-        if let standardInput = standardInput, let data = standardInput.data(using: .utf8) {
+        if let input = standardInput, let data = input.data(using: .utf8) {
             try? inPipe.fileHandleForWriting.write(contentsOf: data)
         }
         try? inPipe.fileHandleForWriting.close()
@@ -93,8 +117,7 @@ enum Shell {
             }
         }
 
-        // Readers end when the child's pipe ends close. Bounded, because a
-        // grandchild holding the pipe open must not hang the app forever.
+        // 孙进程可能还攥着管子,所以等待有上限。
         _ = group.wait(timeout: .now() + 3)
 
         lock.lock()
@@ -107,9 +130,11 @@ enum Shell {
                              timedOut: timedOut, launchError: nil)
     }
 
-    /// Single-quote a string for a remote /bin/sh, the same way lib/remote.sh's
-    /// `shq` does. Anything we send to the server goes through this.
-    static func shellQuote(_ value: String) -> String {
-        return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    /// `~` 展开(SPEC §5.1 要求 fs.* 的路径支持 `~`)。
+    static func expandPath(_ path: String) -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        if path == "~" { return home }
+        if path.hasPrefix("~/") { return home + String(path.dropFirst(1)) }
+        return (path as NSString).expandingTildeInPath
     }
 }

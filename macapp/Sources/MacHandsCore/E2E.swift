@@ -26,10 +26,9 @@ public enum E2ECrypto {
 
     public static let saltString = "machands-v1"
 
-    /// SPEC 写的是「"m2a"/"a2m" 的前 4 字节 ASCII」,而这两个串只有 3 字节 ——
-    /// 规范自相矛盾。这里的解释是:取 UTF-8,右侧补 0x00 到 4 字节,多了截断。
-    /// 这是 Swift 侧与 Node 侧最可能对不上的一处,`PROTOCOL-VECTORS.json` 里的
-    /// 帧一旦到手,先验它。
+    /// SPEC 写的是「"m2a"/"a2m" 的前 4 字节 ASCII」,而这两个串只有 3 字节。
+    /// shared/PROTOCOL-VECTORS.json 定死了:取 UTF-8,右侧补 0x00 到 4 字节
+    /// (`nonce_hex` 的头四字节是 `61326d00` / `6d326100`)。
     public static func directionTag(_ direction: String) -> Data {
         var bytes = [UInt8](Data(direction.utf8).prefix(4))
         while bytes.count < 4 { bytes.append(0) }
@@ -117,9 +116,9 @@ public final class E2ESession {
     public let sendDirection: String
     public let receiveDirection: String
 
-    /// 发出去的第一帧计数器是 0。接收侧只要求"严格递增",所以对端从 0 还是 1
-    /// 开始都能收。
-    private var sendCounter: UInt64 = 0
+    /// shared/PROTOCOL-VECTORS.json:计数器从 **1** 开始单调递增。
+    /// 接收侧只要求严格递增,所以对端从 0 还是 1 开始都能收。
+    private var sendCounter: UInt64 = 1
     private var lastReceived: UInt64?
 
     /// 单帧 ≤ 1 MiB(SPEC §4.5)。base64 会放大 4/3,所以明文上限留 700 KiB。

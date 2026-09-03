@@ -145,7 +145,7 @@ public final class AuditLog {
         try? fm.moveItem(at: url, to: url.appendingPathExtension("1"))
     }
 
-    static func clip(_ text: String) -> String {
+    public static func clip(_ text: String) -> String {
         let flattened = text.replacingOccurrences(of: "\n", with: " ⏎ ")
         if flattened.count <= 400 { return flattened }
         return String(flattened.prefix(400)) + "…"

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  MacHands 的 entitlements。配合 hardened runtime(codesign --options runtime)使用。
+
+  **没有 App Sandbox,而且永远不会有**:这个 App 的全部工作就是替 agent 在用户
+  自己的 Mac 上跑任意命令、读写任意路径、截屏。沙箱化的版本一件都做不了 ——
+  所以也不会有 Mac App Store 版本。这里没有 `com.apple.security.app-sandbox`,
+  那正是有意为之。
+
+  刻意**没有**的几条,免得后来的人以为漏了:
+
+    cs.allow-jit                        我们不生成代码。
+    cs.disable-library-validation       子进程(zsh / xcodebuild / node)是独立进程,
+                                        有自己的签名上下文,不受我们的库校验约束。
+    cs.allow-unsigned-executable-memory  同上。
+
+  唯一真正要的一条是 Apple Events:agent 让 Mac 跑 `osascript` 时,系统把权限
+  算在**我们**头上。没有它,那类命令会直接失败,而且报错毫无线索。
+  第一次用到时系统会弹一次授权框,文案来自 Info.plist 的
+  NSAppleEventsUsageDescription。
+
+  屏幕录制不在这里:TCC 认进程,不认 entitlement(见 SPEC §7.4)。
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+</dict>
+</plist>

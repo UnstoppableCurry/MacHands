@@ -113,12 +113,15 @@ public struct PairingCode: Equatable {
     public static func clipboardText(code: String,
                                      lead: String = "把下面这一行在你的机器上执行,然后告诉我结果:",
                                      note: String = "(这是 MacHands 配对码,10 分钟内有效,只能用一次。)") -> String {
+        // 末尾那个换行是 shared/PROTOCOL-VECTORS.json 里 `pairing.clipboard_block`
+        // 的一部分,两边要逐字节一致。
         return """
         \(lead)
 
         npx -y machands@latest pair "\(code)"
 
         \(note)
+
         """
     }
 }
