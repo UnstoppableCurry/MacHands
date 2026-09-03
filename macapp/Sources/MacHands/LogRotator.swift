@@ -113,8 +113,8 @@ final class Log {
             try? fm.createDirectory(at: Paths.logDir, withIntermediateDirectories: true)
         }
         if !fm.fileExists(atPath: url.path) {
-            fm.createFile(atPath: url.path, contents: nil,
-                          attributes: [.posixPermissions: 0o600])
+            _ = fm.createFile(atPath: url.path, contents: nil,
+                              attributes: [.posixPermissions: 0o600])
         }
         handle = try? FileHandle(forWritingTo: url)
         return handle

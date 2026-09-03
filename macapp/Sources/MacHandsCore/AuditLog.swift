@@ -107,8 +107,8 @@ public final class AuditLog {
         }
         rotateIfNeeded()
         if !fm.fileExists(atPath: url.path) {
-            fm.createFile(atPath: url.path, contents: nil,
-                          attributes: [.posixPermissions: 0o600])
+            _ = fm.createFile(atPath: url.path, contents: nil,
+                              attributes: [.posixPermissions: 0o600])
         }
         guard let handle = try? FileHandle(forWritingTo: url) else {
             onProblem?("audit log not writable at \(url.path)")

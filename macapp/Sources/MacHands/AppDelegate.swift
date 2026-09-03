@@ -299,8 +299,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static func reveal(_ url: URL) {
         if !FileManager.default.fileExists(atPath: url.path) {
             Paths.ensureDirectory(url.deletingLastPathComponent(), permissions: 0o700)
-            FileManager.default.createFile(atPath: url.path, contents: nil,
-                                           attributes: [.posixPermissions: 0o600])
+            _ = FileManager.default.createFile(atPath: url.path, contents: nil,
+                                               attributes: [.posixPermissions: 0o600])
         }
         if !NSWorkspace.shared.open(url) {
             _ = NSWorkspace.shared.selectFile(url.path,
