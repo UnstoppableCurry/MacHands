@@ -212,8 +212,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         root.spacing = 14
         root.edgeInsets = NSEdgeInsets(top: 18, left: 24, bottom: 18, right: 24)
         root.translatesAutoresizingMaskIntoConstraints = false
-        for view in [header, copyButton, copyStatus, waitingRow, connectedBox,
-                     detailsHeader, detailsGrid, footer] {
+        // 显式标注 [NSView]:元素类型不齐(NSStackView / NSButton / NSTextField /
+        // NSGridView),别让类型检查器自己去猜公共父类。
+        let stacked: [NSView] = [header, copyButton, copyStatus, waitingRow, connectedBox,
+                                 detailsHeader, detailsGrid, footer]
+        for view in stacked {
             root.addArrangedSubview(view)
         }
         root.setCustomSpacing(8, after: copyButton)
