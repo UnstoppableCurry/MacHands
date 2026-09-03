@@ -59,8 +59,12 @@ final class Executor {
     /// 一次 fs.get / screen.shot 的分块上限。
     /// 单帧 ≤ 1 MiB(SPEC §4.5),密文再 base64 一次会涨 4/3,所以取 96 KiB 原始字节。
     static let chunkBytes = 96 * 1024
-    /// SPEC §5.1:fs.get ≤ 768 KiB/次。
-    static let maxRead = 768 * 1024
+    /// SPEC §5.1 写的是 fs.get ≤ 768 KiB/次,但 768 KiB 实际上发不出去:
+    /// 原始字节先 base64 进 JSON(×4/3),整条明文再加密、再 base64url 一次(又 ×4/3),
+    /// 768 KiB 到中继那儿是 1.37 MiB,而单帧上限是 1 MiB(SPEC §4.5)。
+    /// 512 KiB 算下来约 911 KiB,留得住余量。要更多就多问几次 —— `eof` 就是干这个的。
+    /// (agent 的 `machands get` 本来就按 512 KiB 分块要,见 agent/src/cli.mjs 的 GET_CHUNK。)
+    static let maxRead = 512 * 1024
     static let defaultTimeout: TimeInterval = 600
 
     private let policy: PolicyEngine

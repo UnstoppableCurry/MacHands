@@ -456,10 +456,15 @@ final class RelayClient {
             guard let self = self else { return }
             guard let agent = SettingsStore.shared.current.agents.first(where: { $0.id == agentId }),
                   let e2eSession = self.sessionOnQueue(for: agent) else { return }
-            guard let body = try? e2eSession.seal(outbound.encoded()) else {
-                Log.shared.write("relay: cannot seal a reply for \(agentId)")
-                return
+            var sealed = try? e2eSession.seal(outbound.encoded())
+            if sealed == nil {
+                // 几乎只可能是"这一帧太大了"。让 agent 拿到一个错,好过让它等到超时。
+                Log.shared.write("relay: cannot seal a reply for \(agentId) — sending EIO instead")
+                let fallback = RPCOutbound.fail(outbound.requestId, .eio,
+                                                "reply too large for one frame")
+                sealed = try? e2eSession.seal(fallback.encoded())
             }
+            guard let body = sealed else { return }
             self.sendSequence += 1
             self.sendJSONOnQueue(SendMessage(to: agentId, body: body, n: self.sendSequence))
         }
