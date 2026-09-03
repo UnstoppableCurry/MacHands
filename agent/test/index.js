@@ -3,4 +3,5 @@
 import './crypto.test.mjs'
 import './rpc.test.mjs'
 import './mcp.test.mjs'
+import './license.test.mjs'
 import './e2e.test.mjs'
