@@ -170,6 +170,16 @@ final class InteropTests: XCTestCase {
             if let expected = entry["canonical_json_utf8"]?.stringValue {
                 XCTAssertEqual(canonical, expected, "canonical JSON for \(who)")
             }
+            // 中继按 auth 报文里的 `ts` 验签,所以报文必须带上它,而且与被签名的
+            // 那个 ts 一模一样(漏掉这个字段就必然 BAD_SIG)。
+            let message = try XCTUnwrap(entry["auth_message"])
+            XCTAssertEqual(message["ts"]?.intValue, signed["ts"]?.intValue,
+                           "\(who) 的 auth 报文里的 ts 必须与签名覆盖的 ts 相同")
+            XCTAssertNotNil(message["ts"]?.intValue, "auth 报文必须带 ts")
+            if who == "mac" {
+                XCTAssertEqual(message["role"]?.stringValue, "mac")
+            }
+
             let signature = try XCTUnwrap(entry["signature_base64url"]?.stringValue)
             let publicKey = try XCTUnwrap(vectors[who]?["ed25519_pub"]?.stringValue)
             XCTAssertTrue(Identity.verify(payload: signed,
