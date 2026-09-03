@@ -7,10 +7,11 @@
     "x25519": "原始私钥/公钥都是 32 字节。Node 侧用 PKCS8/SPKI 前缀包一层,CryptoKit 侧直接用 rawRepresentation。",
     "共享密钥": "ss = X25519(myPriv, theirPub),32 字节;两端算出来必须一致。",
     "会话密钥": "key = HKDF-SHA256(ikm = ss, salt = utf8(\"machands-v1\"), info = utf8([macId, agentId].sort().join(\"|\")), L = 32)。注意 salt 是 HKDF-Extract 的 salt,info 是 Expand 的 info。",
-    "nonce": "12 字节 = 前 4 字节方向标记 + 后 8 字节大端无符号计数器。方向标记是 \"a2m\"(agent→Mac)或 \"m2a\"(Mac→agent)的 ASCII,只有 3 字节,第 4 字节补 0x00。计数器从 1 开始单调递增。",
+    "nonce": "12 字节 = 前 4 字节方向标记 + 后 8 字节大端无符号计数器。方向标记是 \"a2m\"(agent→Mac)或 \"m2a\"(Mac→agent)的 ASCII,只有 3 字节,第 4 字节补 0x00。",
+    "计数器": "发送方:counter = max(上一帧 + 1, 毫秒时间戳 × 1000 + 0..999 的随机数)。不要每个进程都从 1 重新开始——同一把会话密钥下 nonce 重复会直接毁掉 ChaCha20-Poly1305,而且接收方会把新进程的第一帧当成重放。CLI 每次调用都是新进程,Mac 端 App 重启同理。本文件里的示例帧用 1/2/3 只是为了给出稳定的测试向量。",
+    "重放窗口": "接收方记住见过的最大计数器 lastIn 和最近 4096 个计数器:counter <= lastIn - 4096 一律丢(太老),已经见过的也丢(重放),其余接受。用窗口而不是死盯最大值,是为了让同一个 agent 可以同时开几条命令。",
     "aad": "utf8(from + \">\" + to),from/to 是发送方与接收方的 id。",
     "帧": "body = base64url(nonce ‖ ciphertext ‖ tag16)。算法 ChaCha20-Poly1305(IETF,12 字节 nonce,16 字节 tag)。CryptoKit 的 ChaChaPoly.seal 输出 combined = nonce ‖ ct ‖ tag,与本格式逐字节相同。",
-    "重放": "接收方为每个方向记住已见过的最大计数器,收到 <= 它的帧一律丢弃并断开会话。",
     "签名": "sig = base64url(Ed25519.sign(edPriv, utf8(canonicalJSON(payload))));canonicalJSON = 键按字典序升序、无空白、字符串按 JSON 转义。",
     "握手": "relay 在 hello 里给 32 字节随机 nonce(base64url);客户端签 {id, nonce, ts} 三个键。ts 是毫秒时间戳整数。",
     "配对码": "MH1.<relayHost>:<port>.<relayPubkey>.<macId>.<macXPub>.<macEdPub>.<token>.<base64url(utf8(macName))>,字段用 \".\" 分隔。主机名里可能带点(IPv4),所以解析时从尾部数 6 个字段,第 1 个字段之后、尾部 6 个字段之前的一律拼回 host:port。"

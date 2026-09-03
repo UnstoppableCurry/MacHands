@@ -1,0 +1,19 @@
+{
+  "name": "machands-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MacHands 中继:只转发密文。",
+  "type": "module",
+  "main": "server.mjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "license": "MIT"
+}
