@@ -44,14 +44,16 @@ Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin
 | `machands put` / `get` 往返 | 通过,内容一致 |
 | `machands clip set/get` | 通过 |
 | `machands notify` | 通过,通知中心收到 |
-| `machands shot`(授权屏幕录制后) | 通过,得到真实桌面 PNG;发现并修复 Retina 缩放只画四分之一的 bug(提交 `screen.shot: draw whole source rep`),修复版待重新编译验证 |
+| `machands shot`(授权屏幕录制后) | 通过,得到真实桌面 PNG;发现并修复 Retina 缩放只画四分之一的 bug,修复版已在真机验证(1024×576 满幅) |
 | MCP stdio(`initialize` / `tools/list` / `mac_run`) | 通过,11 个工具,`mac_run` 返回真实结果 |
-| 暂停 → 命令被拒(77) | 待用户点暂停后验证 |
-| 撤销授权 → 未配对(66) | 待用户在设置里撤销后验证 |
+| 身份跨重编译存活 | 通过:改为文件存储后,用真证书重签的新版从钥匙串迁移一次,macId 不变、配对不丢(`~/Library/Application Support/MacHands/secrets/identity.v1`,0600) |
+| Apple Development 证书签名 | 通过:`build-app.sh --sign "Apple Development: wang tianxin (4CBL3R2MCH)"`,TeamIdentifier 3PW7WV39F5;之后重编译授权与钥匙串都稳定 |
+| 暂停 → 命令被拒(77) | 未验证(需要用户点菜单「暂停」;逻辑有单元测试覆盖) |
+| 撤销授权 → 未配对(66) | 未验证(需要用户在设置里撤销;relay 与 CLI 侧有测试覆盖) |
 
 ### 联调中发现、排进 v1.1 的两件事
 - **agent 无法安全地远程重启 App**:`kill` App 后它派生出来的重启脚本一起被结束,Mac 离线,只能人手重开。v1.1 加 RPC `app.relaunch`(App 自己用 `open -n` 拉起新实例后退出)和 `app.update`(下载 DMG、校验、替换、重启)。
-- **临时签名下,每次重新编译都会让"屏幕录制"授权失效**(TCC 按代码签名识别 App),表现为 `could not create image from display`。正式 Developer ID 签名后签名要求稳定,更新不会丢权限。开发期的办法:系统设置里把 MacHands 的屏幕录制关掉再打开。
+- **临时(ad-hoc)签名下,每次重新编译都会让"屏幕录制"授权和钥匙串条目失效**(TCC 与钥匙串 ACL 都按代码签名识别 App;ad-hoc 的要求是按 cdhash 钉死的),表现为 `could not create image from display`、设置里开关显示开着但无效、App"失忆"成新 Mac。**已解决**:开发期用 Apple Development 证书签(`build-app.sh --sign "Apple Development: …"`),发布用 Developer ID;身份改为文件存储。若已出现过期条目:`tccutil reset ScreenCapture app.machands.MacHands`,再在设置里用「+」加回并完整重启 App。
 - 另:进程名是完整路径,`pkill -x MacHands` 匹配不到;用 `pgrep -f MacHands.app/Contents/MacOS/MacHands`。
 
 ## 发布前只有你能做的三件事
