@@ -45,12 +45,15 @@ public enum E2ECrypto {
         return out
     }
 
+    private static func hmac(_ message: Data, key: SymmetricKey) -> Data {
+        let code = HMAC<SHA256>.authenticationCode(for: message, using: key)
+        return code.withUnsafeBytes { raw in Data(Array(raw)) }
+    }
+
     /// RFC 5869,HMAC-SHA256。
     public static func hkdfSHA256(ikm: Data, salt: Data, info: Data, length: Int) -> Data {
         let saltBytes = salt.isEmpty ? Data(repeating: 0, count: 32) : salt
-        let prk = Data(HMAC<SHA256>.authenticationCode(for: ikm,
-                                                       using: SymmetricKey(data: saltBytes)))
-        let prkKey = SymmetricKey(data: prk)
+        let prkKey = SymmetricKey(data: hmac(ikm, key: SymmetricKey(data: saltBytes)))
         var out = Data()
         var block = Data()
         var counter: UInt8 = 1
@@ -59,7 +62,7 @@ public enum E2ECrypto {
             input.append(block)
             input.append(info)
             input.append(counter)
-            block = Data(HMAC<SHA256>.authenticationCode(for: input, using: prkKey))
+            block = hmac(input, key: prkKey)
             out.append(block)
             if counter == 255 { break }
             counter += 1

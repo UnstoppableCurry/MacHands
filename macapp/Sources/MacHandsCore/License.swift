@@ -73,7 +73,7 @@ public enum License {
                               now: Date = Date()) -> Result<LicensePayload, LicenseError> {
 
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false).map { String($0) }
         guard parts.count == 3, parts[0] == prefix else { return .failure(.malformed) }
 
         guard let payloadData = Base64URL.decode(parts[1]),
@@ -146,7 +146,7 @@ public enum License {
     }
 
     private static func payloadEmail(_ text: String) -> String? {
-        let parts = text.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        let parts = text.split(separator: ".", omittingEmptySubsequences: false).map { String($0) }
         guard parts.count == 3, let data = Base64URL.decode(parts[1]),
               let payload = try? JSONDecoder().decode(LicensePayload.self, from: data) else {
             return nil

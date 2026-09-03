@@ -221,7 +221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let alert = NSAlert()
             alert.messageText = L("app.name")
             alert.informativeText = problem
-            alert.runModal()
+            _ = alert.runModal()
         }
         SettingsStore.shared.update { $0.launchAtLogin = enabled }
         refreshUI()
@@ -303,8 +303,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                            attributes: [.posixPermissions: 0o600])
         }
         if !NSWorkspace.shared.open(url) {
-            NSWorkspace.shared.selectFile(url.path,
-                                          inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
+            _ = NSWorkspace.shared.selectFile(url.path,
+                                              inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
         }
     }
 

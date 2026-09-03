@@ -74,7 +74,7 @@ public struct PairingCode: Equatable {
             .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
         guard trimmed.hasPrefix(prefix + ".") else { return nil }
         let body = String(trimmed.dropFirst(prefix.count + 1))
-        let parts = body.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+        let parts = body.split(separator: ".", omittingEmptySubsequences: false).map { String($0) }
         // endpoint + 6 个不含点的字段
         guard parts.count >= 7 else { return nil }
         let tailStart = parts.count - 6

@@ -210,7 +210,8 @@ final class Executor {
     }
 
     private func firstLine(_ text: String) -> String {
-        return text.split(separator: "\n", omittingEmptySubsequences: true).first.map(String.init) ?? ""
+        guard let line = text.split(separator: "\n", omittingEmptySubsequences: true).first else { return "" }
+        return String(line)
     }
 
     private func batteryPercent() -> JSONValue {
@@ -337,6 +338,9 @@ final class Executor {
     /// `data` 字段:发出去用标准 base64(SPEC §5.1 写的就是 base64);
     /// 收进来两种都认,免得对面按 §2 的通则用了 base64url。
     private static func decodeBinary(_ text: String) -> Data? {
+        // 顺序有讲究:`.ignoreUnknownCharacters` 会把 base64url 的 `-` 和 `_`
+        // 当成噪声**丢掉**,于是安静地解出一段错的字节。所以先看有没有这两个字符。
+        if text.contains("-") || text.contains("_") { return Base64URL.decode(text) }
         if let data = Data(base64Encoded: text, options: [.ignoreUnknownCharacters]) { return data }
         return Base64URL.decode(text)
     }
@@ -608,7 +612,7 @@ final class Executor {
             alert.addButton(withTitle: L("perm.later"))
             if alert.runModal() == .alertFirstButtonReturn {
                 let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
-                if let url = url { NSWorkspace.shared.open(url) }
+                if let url = url { _ = NSWorkspace.shared.open(url) }
             }
         }
     }

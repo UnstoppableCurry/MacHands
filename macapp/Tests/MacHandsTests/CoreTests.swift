@@ -389,10 +389,18 @@ final class RelayMessageTests: XCTestCase {
     }
 
     func testEncodeAuth() throws {
-        let message = AuthMessage(id: "i", edPub: "e", xPub: "x", name: "n", sig: "s")
+        let message = AuthMessage(id: "i", edPub: "e", xPub: "x", name: "n", sig: "s",
+                                  ts: 1756800000000)
         let text = try XCTUnwrap(RelayCodec.encode(message))
         XCTAssertTrue(text.contains("\"t\":\"auth\""))
         XCTAssertTrue(text.contains("\"role\":\"mac\""))
+        // 中继按 msg.ts 验签,所以它必须原样出现在报文里,而且是整数。
+        XCTAssertTrue(text.contains("\"ts\":1756800000000"), text)
+    }
+
+    func testNowMillisecondsIsAWholeNumber() {
+        let stamp = RelayCodec.nowMilliseconds(Date(timeIntervalSince1970: 1756800000.4))
+        XCTAssertEqual(stamp, 1756800000400)
     }
 
     func testAuthPayloadIsTheThreeSignedKeys() {

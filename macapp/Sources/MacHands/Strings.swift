@@ -63,8 +63,6 @@ struct Strings {
         "menu.quit": ["zh": "退出 MacHands", "en": "Quit MacHands"],
         "menu.agentLine": ["zh": "%@ · %@ · %@前", "en": "%@ · %@ · %@ ago"],
         "menu.agentIdle": ["zh": "%@ · 还没执行过命令", "en": "%@ · nothing run yet"],
-        "menu.trial": ["zh": "试用中,还剩 %d 天", "en": "Trial · %d days left"],
-        "menu.trialOver": ["zh": "试用结束 —— 执行与写入已停用", "en": "Trial over — running and writing are off"],
 
         // --- 主窗口 (SPEC §7.2) -----------------------------------------------
         "main.headline": ["zh": "把这台 Mac 交给你的 agent", "en": "Hand this Mac to your agent"],
@@ -138,7 +136,6 @@ struct Strings {
 
         // --- 许可证 (SPEC §7.5) -----------------------------------------------
         "license.trial": ["zh": "试用中,还剩 %d 天", "en": "Trial · %d days left"],
-        "license.trialOver": ["zh": "试用结束", "en": "Trial over"],
         "license.ok": ["zh": "已授权 · %@", "en": "Licensed · %@"],
         "license.expired": ["zh": "许可证已过期 · %@", "en": "Licence expired · %@"],
         "license.invalid": ["zh": "许可证无效", "en": "Licence is not valid"],

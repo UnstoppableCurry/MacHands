@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MacHandsCore
 
@@ -185,7 +186,7 @@ final class RelayClient {
                 guard mine == self.generation else { return }
                 switch result {
                 case .failure(let error):
-                    self.handleDisconnect(reason: error.localizedDescription)
+                    self.handleDisconnect(reason: RelayClient.friendly(error))
                 case .success(let message):
                     self.lastInbound = Date()
                     switch message {
@@ -200,6 +201,23 @@ final class RelayClient {
                     self.receiveOnQueue(socket, generation: mine)
                 }
             }
+        }
+    }
+
+    /// URLSession 的原文("The operation couldn't be completed…")对用户毫无意义。
+    /// 认得出的几种网络故障换成人话,认不出的原样透出去 —— 不编。
+    private static func friendly(_ error: Error) -> String {
+        let ns = error as NSError
+        guard ns.domain == NSURLErrorDomain else { return ns.localizedDescription }
+        switch ns.code {
+        case NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed:
+            return L("fail.dns")
+        case NSURLErrorCannotConnectToHost, NSURLErrorTimedOut:
+            return L("fail.refused")
+        case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
+            return L("fail.network")
+        default:
+            return ns.localizedDescription
         }
     }
 
@@ -267,6 +285,19 @@ final class RelayClient {
                 Log.shared.write("relay: key changed (pinned \(pinned), got \(key)) — refusing")
                 return
             }
+            // pin 住公钥还不够:让中继证明它握着对应的私钥。
+            if let signature = hello.sig {
+                let payload = RelayCodec.helloPayload(relayId: key, nonce: hello.nonce, ts: hello.ts)
+                guard Identity.verify(payload: payload,
+                                      signatureB64URL: signature,
+                                      edPublicKeyB64URL: key) else {
+                    state = .failed(L("fail.badSig"))
+                    wantsConnection = false
+                    teardownOnQueue()
+                    Log.shared.write("relay: hello signature does not verify — refusing")
+                    return
+                }
+            }
             relayKey = key
             sendAuthOnQueue(hello)
 
@@ -308,6 +339,10 @@ final class RelayClient {
             handleIncomingFrame(frame)
 
         case .presence(let presence):
+            // 会话(以及两个方向的计数器)是**连接**级的:对端上线/下线就意味着
+            // 它那边的计数器从 1 重新开始,所以我们也把这条会话丢掉重建。
+            // presence 是两端共同的同步信号 —— 中继给双方都发。
+            e2e.removeValue(forKey: presence.id)
             if presence.online { online.insert(presence.id) } else { online.remove(presence.id) }
             DispatchQueue.main.async { [weak self] in self?.onAgentsChanged?() }
 
@@ -317,7 +352,12 @@ final class RelayClient {
     }
 
     private func sendAuthOnQueue(_ hello: HelloMessage) {
-        let payload = RelayCodec.authPayload(id: identity.macId, nonce: hello.nonce, ts: hello.ts)
+        // 签的 ts 是**我们自己的**当前毫秒时间,不是 hello 里那个:中继按
+        // `msg.ts` 验签,并要求它与自己的时钟差在 5 分钟内。
+        let timestamp = RelayCodec.nowMilliseconds()
+        let payload = RelayCodec.authPayload(id: identity.macId,
+                                             nonce: hello.nonce,
+                                             ts: Double(timestamp))
         guard let signature = identity.sign(payload) else {
             state = .failed(L("fail.badSig"))
             return
@@ -327,7 +367,8 @@ final class RelayClient {
                                     edPub: identity.edPublicKeyB64,
                                     xPub: identity.xPublicKeyB64,
                                     name: name,
-                                    sig: signature))
+                                    sig: signature,
+                                    ts: timestamp))
     }
 
     /// SPEC §4.2:token 没过期就**自动允许**并弹通知;同时记进"已授权 agent"。

@@ -22,8 +22,12 @@ public struct AuthMessage: Codable {
     public let xPub: String
     public let name: String
     public let sig: String
+    /// **客户端自己的**毫秒时间戳,不是 hello 里那个。
+    /// 中继验签用的正是这个字段,并且要求它与中继的时钟相差不超过 5 分钟;
+    /// 签名覆盖 `{id, nonce, ts}`,ts 必须与这里发出去的一模一样。
+    public let ts: Int
 
-    public init(id: String, edPub: String, xPub: String, name: String, sig: String) {
+    public init(id: String, edPub: String, xPub: String, name: String, sig: String, ts: Int) {
         self.t = "auth"
         self.role = "mac"
         self.id = id
@@ -31,6 +35,7 @@ public struct AuthMessage: Codable {
         self.xPub = xPub
         self.name = name
         self.sig = sig
+        self.ts = ts
     }
 }
 
@@ -97,6 +102,9 @@ public struct HelloMessage: Codable {
     public let nonce: String
     public let ts: Double
     public let ver: Int?
+    /// 中继用自己的 Ed25519 私钥签的 `{nonce, relayId, ts}`。
+    /// 有它就能证明对面确实握着我们 pin 的那把私钥,而不只是知道公钥。
+    public let sig: String?
 
     /// 配对块里那一段、也是要 pin 的那一段。
     public var relayKey: String? {
@@ -193,11 +201,25 @@ public enum RelayCodec {
         }
     }
 
+    /// 现在的毫秒时间戳,整数 —— auth 的 `ts` 与被签名的 `ts` 都用它。
+    public static func nowMilliseconds(_ date: Date = Date()) -> Int {
+        return Int((date.timeIntervalSince1970 * 1000).rounded())
+    }
+
     /// SPEC §4.1:签的是 `{id, nonce, ts}` 的 canonical JSON。
     public static func authPayload(id: String, nonce: String, ts: Double) -> JSONValue {
         return .object([
             "id": .string(id),
             "nonce": .string(nonce),
+            "ts": .number(ts)
+        ])
+    }
+
+    /// 中继在 hello 里签的是 `{nonce, relayId, ts}`。
+    public static func helloPayload(relayId: String, nonce: String, ts: Double) -> JSONValue {
+        return .object([
+            "nonce": .string(nonce),
+            "relayId": .string(relayId),
             "ts": .number(ts)
         ])
     }
