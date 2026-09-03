@@ -87,3 +87,9 @@ Gatekeeper 到底放不放行。每一步都会打印它在干什么;失败会�
 | 截屏返回 `EIO` | 屏幕录制没授权。系统设置 → 隐私与安全性 → 屏幕录制,勾上 MacHands |
 | codesign 报 `resource fork ... not allowed` | `xattr -cr dist/MacHands.app` 再签 |
 | 公证被拒 | `xcrun notarytool log <id> --keychain-profile machands-notary` 看原因 |
+
+## entitlements 说明
+
+`Resources/MacHands.entitlements` 里**不能写 XML 注释**(codesign 用的 AMFI 解析器会报 `AMFIUnserializeXML: syntax error`)。
+它只有一条 `com.apple.security.automation.apple-events`;**没有 App Sandbox**,这是有意的:App 要替 agent 在用户
+自己的 Mac 上跑任意命令、读写任意路径、截屏,沙箱化的版本一件都做不了,所以也不会有 Mac App Store 版本。
