@@ -196,12 +196,19 @@ final class InteropTests: XCTestCase {
                                           edPublicKeyB64URL: publicKey),
                           "\(who)'s auth signature must verify")
 
-            // 我们自己签一遍也要得到同一串(Ed25519 是确定性签名)。
+            // 我们用同一把私钥签出来的签名,Node 侧那把公钥必须验得过。
+            // 注意:CryptoKit 的 Ed25519 签名带随机数(不是 RFC 8032 的确定性签名),
+            // 所以不能比较字节串,只能互验。
             let privateRaw = try XCTUnwrap(Base64URL.decode(
                 try XCTUnwrap(vectors[who]?["ed25519_priv"]?.stringValue)))
             let key = try Curve25519.Signing.PrivateKey(rawRepresentation: privateRaw)
+            XCTAssertEqual(Base64URL.encode(key.publicKey.rawRepresentation), publicKey,
+                           "\(who) 的私钥必须对应向量里的公钥")
             let ours = try key.signature(for: Data(canonical.utf8))
-            XCTAssertEqual(Base64URL.encode(ours), signature)
+            XCTAssertTrue(Identity.verify(payload: signed,
+                                          signatureB64URL: Base64URL.encode(ours),
+                                          edPublicKeyB64URL: publicKey),
+                          "\(who): 我们签的也要能被同一公钥验过")
         }
     }
 

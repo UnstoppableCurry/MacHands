@@ -592,12 +592,14 @@ final class LicenseTests: XCTestCase {
         XCTAssertTrue(over.blocksWrites)
     }
 
-    func testEmptyPublicKeyMeansNoLicenceSystemYet() throws {
+    func testEmptyPublicKeyIsRejectedAndReleaseKeyIsEmbedded() throws {
         // 载荷本身没问题,只是 App 里还没编进公钥。
         let payload = try JSONEncoder().encode(LicensePayload(email: "a@b", exp: nil, seats: 1))
         let text = "MHL1." + Base64URL.encode(payload) + ".AAAA"
         XCTAssertEqual(License.verify(text, publicKeyB64URL: ""), .failure(.noPublicKey))
-        XCTAssertEqual(LicensePublicKeyB64URL, "", "发布前要把签发公钥填进 License.swift")
+        // 发布用公钥已编进 App:32 字节 Ed25519 公钥的 base64url 无填充是 43 个字符。
+        XCTAssertEqual(LicensePublicKeyB64URL.count, 43, "License.swift 里的签发公钥必须是 32 字节 base64url")
+        XCTAssertEqual(Base64URL.decode(LicensePublicKeyB64URL)?.count, 32)
     }
 }
 
