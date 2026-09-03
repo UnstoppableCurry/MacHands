@@ -31,6 +31,24 @@
 
 Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin/machands.mjs mcp`(发布后换成 `npx -y machands mcp`)。
 
+
+## 真机联调记录(2026-09-03,MacBook Air + 托管中继 + 本服务器作为 agent)
+
+| 步骤 | 结果 |
+|---|---|
+| App 点「复制给 agent」→ 贴给 agent → `machands pair` | 通过,约 20 秒变为"已连接" |
+| `machands info` | 通过(Mac14,2 / macOS 26.3.1 / Xcode 26.2 / 电量) |
+| `machands run`(自动放行模式) | 通过,0.7 秒 |
+| `machands run`(逐条问模式,用户按 1) | 通过,等待 30 秒后执行 |
+| `machands run`(逐条问,120 秒无人点) | 返回 TIMEOUT,退出码 78,符合契约 |
+| `machands put` / `get` 往返 | 通过,内容一致 |
+| `machands clip set/get` | 通过 |
+| `machands notify` | 通过,通知中心收到 |
+| `machands shot`(授权屏幕录制后) | 通过,得到真实桌面 PNG;发现并修复 Retina 缩放只画四分之一的 bug(提交 `screen.shot: draw whole source rep`),修复版待重新编译验证 |
+| MCP stdio(`initialize` / `tools/list` / `mac_run`) | 通过,11 个工具,`mac_run` 返回真实结果 |
+| 暂停 → 命令被拒(77) | 待用户点暂停后验证 |
+| 撤销授权 → 未配对(66) | 待用户在设置里撤销后验证 |
+
 ## 发布前只有你能做的三件事
 
 1. **Developer ID 证书**:Xcode → Settings → Accounts → 你的团队 → Manage Certificates → `+` → Developer ID Application。
