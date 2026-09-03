@@ -3,7 +3,7 @@ import CryptoKit
 
 /// SPEC §7.5 的签发公钥。发布前用 `tools/license/` 里的私钥对应的公钥替换掉。
 /// 空串 = 还没有签发体系,任何许可证都验不过,只有 7 天试用生效。
-public let LicensePublicKeyB64URL: String = ""
+public let LicensePublicKeyB64URL: String = "NPOvbwIgiYzwzEtE38LN0AapPOxOhzWLlRIxR_ST6kg"
 
 public struct LicensePayload: Codable, Equatable {
     public let email: String
