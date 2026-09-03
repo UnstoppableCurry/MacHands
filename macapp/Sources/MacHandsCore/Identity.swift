@@ -2,9 +2,8 @@ import Foundation
 import CryptoKit
 import Security
 
-/// 私钥存哪里。Keychain 是正主;测试与"直接跑 .build/release 里的裸二进制"
-/// 两种情况下 Keychain 会失败(没有 bundle id / 没有 entitlement),那时退到
-/// UserDefaults —— 明确降级,好过静默不工作。
+/// 私钥存哪里。文件(FileSecretStore)是正主;Keychain 只作为老版本的迁移来源;
+/// UserDefaults 只给测试用。
 public protocol SecretStore: AnyObject {
     func data(forKey key: String) -> Data?
     @discardableResult func set(_ value: Data, forKey key: String) -> Bool
@@ -84,23 +83,77 @@ public final class UserDefaultsSecretStore: SecretStore {
     }
 }
 
-/// 先 Keychain,不行就 UserDefaults。写入时两边都写(Keychain 成功时也写一份
-/// 到 defaults 是**不行**的 —— 私钥不能落到 plist),所以只有 Keychain 失败
-/// 时才退。
+/// 文件存储:~/Library/Application Support/MacHands/secrets/<key>,目录 0700、文件 0600。
+/// 这是正主。Keychain 的条目按代码签名绑定 App,重新签名(每次开发编译、换证书)
+/// 之后旧条目就读不到,App 会"失忆"变成一台新 Mac,配对全丢 —— 真机联调撞到过。
+/// 文件只受 POSIX 权限保护,跟 agent 侧 ~/.machands/identity.json 是同一档安全假设。
+public final class FileSecretStore: SecretStore {
+
+    private let directory: URL
+
+    public init(directory: URL? = nil) {
+        if let directory = directory {
+            self.directory = directory
+        } else {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            self.directory = home.appendingPathComponent(
+                "Library/Application Support/MacHands/secrets", isDirectory: true)
+        }
+    }
+
+    private func url(_ key: String) -> URL {
+        let safe = key.replacingOccurrences(of: "/", with: "_")
+        return directory.appendingPathComponent(safe, isDirectory: false)
+    }
+
+    public func data(forKey key: String) -> Data? {
+        return try? Data(contentsOf: url(key))
+    }
+
+    @discardableResult
+    public func set(_ value: Data, forKey key: String) -> Bool {
+        let fm = FileManager.default
+        do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: true,
+                                   attributes: [.posixPermissions: 0o700])
+            try fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+            let target = url(key)
+            let tmp = directory.appendingPathComponent(".\(target.lastPathComponent).tmp")
+            try value.write(to: tmp, options: [.atomic])
+            try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: tmp.path)
+            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+            try fm.moveItem(at: tmp, to: target)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public func remove(forKey key: String) {
+        try? FileManager.default.removeItem(at: url(key))
+    }
+}
+
+/// 先 primary,读不到再查 secondary;secondary 里有的会被**搬到 primary**
+/// (老版本把身份放在 Keychain,升级后迁到文件)。写只写 primary,primary 写不了才退。
 public final class FallbackSecretStore: SecretStore {
 
     private let primary: SecretStore
     private let secondary: SecretStore
 
-    public init(primary: SecretStore = KeychainStore(),
-                secondary: SecretStore = UserDefaultsSecretStore()) {
+    public init(primary: SecretStore = FileSecretStore(),
+                secondary: SecretStore = KeychainStore()) {
         self.primary = primary
         self.secondary = secondary
     }
 
     public func data(forKey key: String) -> Data? {
         if let value = primary.data(forKey: key) { return value }
-        return secondary.data(forKey: key)
+        guard let value = secondary.data(forKey: key) else { return nil }
+        if primary.set(value, forKey: key) {
+            secondary.remove(forKey: key)
+        }
+        return value
     }
 
     @discardableResult

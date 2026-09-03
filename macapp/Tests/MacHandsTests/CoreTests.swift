@@ -664,3 +664,46 @@ enum CoreTestHelpers {
         return Data(bytes)
     }
 }
+
+final class FileSecretStoreTests: XCTestCase {
+
+    private func tempDir() -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("machands-secrets-\(UUID().uuidString)", isDirectory: true)
+        return url
+    }
+
+    func testRoundTripAndPermissions() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = FileSecretStore(directory: dir)
+        XCTAssertNil(store.data(forKey: "identity.v1"))
+        XCTAssertTrue(store.set(Data([1, 2, 3]), forKey: "identity.v1"))
+        XCTAssertEqual(store.data(forKey: "identity.v1"), Data([1, 2, 3]))
+        let attrs = try FileManager.default.attributesOfItem(
+            atPath: dir.appendingPathComponent("identity.v1").path)
+        XCTAssertEqual((attrs[.posixPermissions] as? Int) ?? 0, 0o600)
+        let dirAttrs = try FileManager.default.attributesOfItem(atPath: dir.path)
+        XCTAssertEqual((dirAttrs[.posixPermissions] as? Int) ?? 0, 0o700)
+        store.remove(forKey: "identity.v1")
+        XCTAssertNil(store.data(forKey: "identity.v1"))
+    }
+
+    func testFallbackMigratesFromSecondaryToPrimary() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let primary = FileSecretStore(directory: dir)
+        let secondary = UserDefaultsSecretStore(defaults: UserDefaults(suiteName: "mh-test-\(UUID().uuidString)")!,
+                                                prefix: "test.")
+        secondary.set(Data([9, 9]), forKey: "identity.v1")
+        let store = FallbackSecretStore(primary: primary, secondary: secondary)
+        XCTAssertEqual(store.data(forKey: "identity.v1"), Data([9, 9]))
+        // 搬家完成:文件里有了,旧位置清掉。
+        XCTAssertEqual(primary.data(forKey: "identity.v1"), Data([9, 9]))
+        XCTAssertNil(secondary.data(forKey: "identity.v1"))
+        // 同一身份再读一次仍然一致(loadOrCreate 不会再生成新 id)。
+        let a = Identity.loadOrCreate(store: store, name: "x")
+        let b = Identity.loadOrCreate(store: store, name: "x")
+        XCTAssertEqual(a.macId, b.macId)
+    }
+}
