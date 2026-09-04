@@ -58,8 +58,7 @@ Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin
 
 ## 发布前只有你能做的三件事
 
-1. **Developer ID 证书**:Xcode → Settings → Accounts → 你的团队 → Manage Certificates → `+` → Developer ID Application。
-   验证:`security find-identity -v -p codesigning` 里出现 `Developer ID Application: 你的名字 (TEAMID)`。
+1. ~~**Developer ID 证书**~~ **已完成(2026-09-04)**:`Developer ID Application: wang tianxin (3PW7WV39F5)`,已用它重新签名、打包了全部 3 个 DMG(通用/Apple Silicon/Intel),已上线 `/dl/`。
 2. **公证凭据**:在 App Store Connect 生成 App 专用密码或 API Key,然后
    `xcrun notarytool store-credentials machands-notary --apple-id <你的 Apple ID> --team-id <TEAMID> --password <app 专用密码>`。
 3. **发布 npm 包**(配对码里的 `npx -y machands@latest` 依赖它):
