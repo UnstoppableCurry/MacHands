@@ -480,7 +480,7 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
 
     <div class="dl-card">
       <a class="btn-primary" href="/dl/MacHands-0.1.0.dmg" download style="justify-content:center; min-width:280px" data-i18n="dl.primary">↓ Download for macOS (Universal)</a>
-      <div class="dl-meta" data-i18n="dl.meta">Apple Silicon &amp; Intel · macOS 13+ · v0.1.0 · 2.6 MB</div>
+      <div class="dl-meta" data-i18n="dl.meta">Apple Silicon &amp; Intel · macOS 13+ · v0.1.0 · notarized by Apple</div>
       <div class="dl-alt">
         <span data-i18n="dl.altLabel">Smaller, single-architecture builds:</span>
         <a href="/dl/MacHands-0.1.0-apple-silicon.dmg" data-i18n="dl.appleSilicon">Apple Silicon only</a>
@@ -489,14 +489,14 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       </div>
     </div>
 
-    <div class="prerelease">
-      <span class="dot2">●</span>
-      <span data-i18n="dl.prerelease">This build is signed with a Developer ID certificate but not yet notarized by Apple, so macOS shows a one-time warning on first open. It's a normal, safe step for software distributed outside the App Store before notarization completes — not a sign anything is wrong. See exactly what to click just below.</span>
+    <div class="prerelease" style="border-color:rgba(78,225,160,.3); background:rgba(78,225,160,.06)">
+      <span class="dot2" style="color:var(--accent)">✓</span>
+      <span data-i18n="dl.prerelease">Signed with a Developer ID certificate and notarized by Apple — it opens normally, no security workaround needed.</span>
     </div>
 
     <div class="waitlist">
-      <h3 data-i18n="wl.title2">Want the notarized version + a license by email instead?</h3>
-      <p data-i18n="wl.lead2">Leave your email and we'll send the fully notarized build and a license the moment checkout opens — one email, no spam.</p>
+      <h3 data-i18n="wl.title2">Want a license by email once checkout opens?</h3>
+      <p data-i18n="wl.lead2">Leave your email and we'll send a license the moment payment is live — one email, no spam. The app itself is ready to use now.</p>
       <form class="wl-form" id="wlForm">
         <input type="email" id="wlEmail" placeholder="you@example.com" required>
         <button type="submit" data-i18n="wl.submit">Notify me</button>
@@ -519,8 +519,8 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       </div>
       <div class="step">
         <div class="num">2</div>
-        <h3 data-i18n="inst.2.title">Right-click → Open (first time only)</h3>
-        <p data-i18n="inst.2.body">In Applications, right-click MacHands and choose Open, then confirm Open in the dialog. macOS only asks this once, because the build isn't notarized yet.</p>
+        <h3 data-i18n="inst.2.title">Open it</h3>
+        <p data-i18n="inst.2.body">Double-click MacHands in Applications. It's notarized, so it opens like any other Mac app — no extra clicks or security workarounds.</p>
       </div>
       <div class="step">
         <div class="num">3</div>
@@ -629,17 +629,17 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       "dl.kicker":"DOWNLOAD","dl.title":"Get MacHands",
       "dl.lead":"Payment isn't wired up yet, so it's free to download and use during the trial while that's finished.",
       "dl.primary":"↓ Download for macOS (Universal)",
-      "dl.meta":"Apple Silicon & Intel · macOS 13+ · v0.1.0 · 2.6 MB",
+      "dl.meta":"Apple Silicon & Intel · macOS 13+ · v0.1.0 · notarized by Apple",
       "dl.altLabel":"Smaller, single-architecture builds:","dl.appleSilicon":"Apple Silicon only","dl.intel":"Intel only",
-      "dl.prerelease":"This build is signed with a Developer ID certificate but not yet notarized by Apple, so macOS shows a one-time warning on first open. It's a normal, safe step for software distributed outside the App Store before notarization completes — not a sign anything is wrong. See exactly what to click just below.",
-      "wl.title2":"Want the notarized version + a license by email instead?",
-      "wl.lead2":"Leave your email and we'll send the fully notarized build and a license the moment checkout opens — one email, no spam.",
+      "dl.prerelease":"Signed with a Developer ID certificate and notarized by Apple — it opens normally, no security workaround needed.",
+      "wl.title2":"Want a license by email once checkout opens?",
+      "wl.lead2":"Leave your email and we'll send a license the moment payment is live — one email, no spam. The app itself is ready to use now.",
       "wl.submit":"Notify me",
       "inst.kicker":"INSTALL","inst.title":"Three minutes, once.","inst.lead":"Exactly what to click, in order.",
       "inst.1.title":"Open the .dmg, drag to Applications",
       "inst.1.body":"Double-click the downloaded file, then drag the MacHands icon onto the Applications shortcut in the window that opens.",
-      "inst.2.title":"Right-click → Open (first time only)",
-      "inst.2.body":"In Applications, right-click MacHands and choose Open, then confirm Open in the dialog. macOS only asks this once, because the build isn't notarized yet.",
+      "inst.2.title":"Open it",
+      "inst.2.body":"Double-click MacHands in Applications. It's notarized, so it opens like any other Mac app — no extra clicks or security workarounds.",
       "inst.3.title":'Click "Copy for agent"',
       "inst.3.body":'A hand appears in your menu bar. Click it, click "Copy for agent," and paste the text to your cloud agent.',
       "faq.kicker":"FAQ","faq.title":"Questions",
@@ -695,17 +695,17 @@ Test Suite 'All tests' passed. Executed 42 tests, with 0 failures.</div></div>
       "dl.kicker":"下载","dl.title":"获取 MacHands",
       "dl.lead":"收款功能还没接通,所以在那之前免费下载、免费用完整试用期。",
       "dl.primary":"↓ 下载 macOS 版(通用)",
-      "dl.meta":"支持 Apple Silicon 与 Intel · macOS 13 及以上 · v0.1.0 · 2.6 MB",
+      "dl.meta":"支持 Apple Silicon 与 Intel · macOS 13 及以上 · v0.1.0 · 已通过苹果公证",
       "dl.altLabel":"文件更小的单架构版本:","dl.appleSilicon":"仅 Apple Silicon","dl.intel":"仅 Intel",
-      "dl.prerelease":"这一版已经用正式的 Developer ID 证书签名,但还没经过苹果公证,所以第一次打开 macOS 会弹一次警告。这是 App Store 之外的软件在公证完成前的正常步骤,不代表有问题。下面会写清楚具体点哪里。",
-      "wl.title2":"想要正式公证版 + 邮件发许可证?",
-      "wl.lead2":"留下邮箱,正式开放付费的那一刻,我们会把完整公证版和许可证发给你——只发这一封,不会打扰你。",
+      "dl.prerelease":"已用 Developer ID 证书签名并通过苹果公证——正常打开即可,不需要任何绕过安全提示的操作。",
+      "wl.title2":"想在开放付费时收到邮件通知并拿到许可证?",
+      "wl.lead2":"留下邮箱,正式开放付费的那一刻,我们会把许可证发给你——只发这一封,不会打扰你。App 现在就能正常用。",
       "wl.submit":"提醒我",
       "inst.kicker":"安装","inst.title":"三分钟,只需一次。","inst.lead":"该点哪里,按顺序说清楚。",
       "inst.1.title":"打开 .dmg,拖进 Applications",
       "inst.1.body":"双击下载好的文件,把弹出窗口里的 MacHands 图标拖到 Applications 快捷方式上。",
-      "inst.2.title":"右键 → 打开(只有第一次要这样)",
-      "inst.2.body":"在 Applications 里右键点 MacHands,选「打开」,弹窗里再确认一次「打开」。因为还没公证,macOS 只会问这一次。",
+      "inst.2.title":"打开它",
+      "inst.2.body":"在 Applications 里双击 MacHands。已经通过公证,跟打开其它 Mac 应用一样,不需要额外操作。",
       "inst.3.title":"点「复制给 agent」",
       "inst.3.body":"菜单栏会出现一只手,点它,点「复制给 agent」,把文字贴给你的云端 agent。",
       "faq.kicker":"常见问题","faq.title":"常见问题",
