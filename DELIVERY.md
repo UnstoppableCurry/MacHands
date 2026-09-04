@@ -58,11 +58,10 @@ Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin
 
 ## 发布前只有你能做的三件事
 
-1. ~~**Developer ID 证书**~~ **已完成(2026-09-04)**:`Developer ID Application: wang tianxin (3PW7WV39F5)`,已用它重新签名、打包了全部 3 个 DMG(通用/Apple Silicon/Intel),已上线 `/dl/`。
-2. **公证凭据**:在 App Store Connect 生成 App 专用密码或 API Key,然后
-   `xcrun notarytool store-credentials machands-notary --apple-id <你的 Apple ID> --team-id <TEAMID> --password <app 专用密码>`。
+1. ~~**Developer ID 证书**~~ **已完成(2026-09-04)**:`Developer ID Application: wang tianxin (3PW7WV39F5)`。
+2. ~~**公证凭据**~~ **已完成(2026-09-04)**:profile `machands-notary` 已存进 Mac 钥匙串。全部 3 个 DMG(通用/Apple Silicon/Intel)已重新签名、提交公证、`spctl` 验证通过("source=Notarized Developer ID"),已上线 `/dl/`,官网文案同步改成"已通过苹果公证",不再提右键打开。
 3. **发布 npm 包**(配对码里的 `npx -y machands@latest` 依赖它):
-   `cd agent && npm login && npm publish --access public`。包名 `machands` 若被占用,改 `agent/package.json` 的 `name` 并同步改 `macapp/Sources/MacHandsCore/PairingCode.swift` 里的那一行命令。
+   `cd agent && npm login && npm publish --access public`。包名 `machands` 若被占用,改 `agent/package.json` 的 `name` 并同步改 `macapp/Sources/MacHandsCore/PairingCode.swift` 里的那一行命令。这是**最后一件卡住的事**。
 
 做完 1 和 2 后,在 Mac 上:
 ```
