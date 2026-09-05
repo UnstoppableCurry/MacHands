@@ -15,8 +15,7 @@
 
 1. Mac 上打开 MacHands,点「复制给 agent」。
 2. 把文字贴给 agent。agent 执行其中的 `npx -y machands@latest pair "MH1…"`。
-   **npm 包还没发布之前**,agent 机器上用仓库路径代替:
-   `node /root/wtx/machands/agent/bin/machands.mjs pair "MH1…"`。
+   包已发布,任何有 Node 的机器直接跑这一句即可。
 3. 菜单栏变成「已连接 · <agent 名>」。
 4. agent 侧依次试:
    ```
@@ -29,7 +28,7 @@
 5. 菜单里点「暂停」,再 `machands run -- true` 应得到 `DENIED`(退出码 77)。
 6. 设置 → 已授权 agent → 撤销,再执行应得到未配对(退出码 66)。
 
-Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin/machands.mjs mcp`(发布后换成 `npx -y machands mcp`)。
+Claude Code 接入:`claude mcp add machands -- npx -y machands mcp`(包已发布,不必再用仓库路径)。
 
 
 ## 真机联调记录(2026-09-03,MacBook Air + 托管中继 + 本服务器作为 agent)
@@ -56,12 +55,25 @@ Claude Code 接入:`claude mcp add machands -- node /root/wtx/machands/agent/bin
 - **临时(ad-hoc)签名下,每次重新编译都会让"屏幕录制"授权和钥匙串条目失效**(TCC 与钥匙串 ACL 都按代码签名识别 App;ad-hoc 的要求是按 cdhash 钉死的),表现为 `could not create image from display`、设置里开关显示开着但无效、App"失忆"成新 Mac。**已解决**:开发期用 Apple Development 证书签(`build-app.sh --sign "Apple Development: …"`),发布用 Developer ID;身份改为文件存储。若已出现过期条目:`tccutil reset ScreenCapture app.machands.MacHands`,再在设置里用「+」加回并完整重启 App。
 - 另:进程名是完整路径,`pkill -x MacHands` 匹配不到;用 `pgrep -f MacHands.app/Contents/MacOS/MacHands`。
 
-## 发布前只有你能做的三件事
+## 发布前只有你能做的三件事(三件都已完成)
 
 1. ~~**Developer ID 证书**~~ **已完成(2026-09-04)**:`Developer ID Application: wang tianxin (3PW7WV39F5)`。
 2. ~~**公证凭据**~~ **已完成(2026-09-04)**:profile `machands-notary` 已存进 Mac 钥匙串。全部 3 个 DMG(通用/Apple Silicon/Intel)已重新签名、提交公证、`spctl` 验证通过("source=Notarized Developer ID"),已上线 `/dl/`,官网文案同步改成"已通过苹果公证",不再提右键打开。
-3. **发布 npm 包**(配对码里的 `npx -y machands@latest` 依赖它):
-   `cd agent && npm login && npm publish --access public`。包名 `machands` 若被占用,改 `agent/package.json` 的 `name` 并同步改 `macapp/Sources/MacHandsCore/PairingCode.swift` 里的那一行命令。这是**最后一件卡住的事**。
+3. ~~**发布 npm 包**~~ **已完成(2026-09-06)**:`machands@0.1.0` 已在 npm 上,
+   `npm view machands version` 返回 0.1.0,shasum `c9e2fca2…` 与本地打包一致。
+   配对码里那句 `npx -y machands@latest pair "MH1…"` 已在干净环境实测跑通,不必再用仓库路径代替。
+
+   **发布过程踩到的坑,下次发版直接照做:**
+   - 老板的 Mac 在国内直连 registry.npmjs.org **上传**时稳定 ECONNRESET(TLS 握手前被重置),重试无用;
+     但这台云服务器连 npm 正常。所以**发布走云端**。
+   - 云端没有浏览器**不妨碍**登录:`npm login --auth-type=web` 会打印一个登录 URL,
+     那个 URL 在任何浏览器打开都算数。做法:云端后台跑
+     `printf '\n' | npm login --auth-type=web > log 2>&1 &`,从 log 里取 URL 交给老板,
+     他在 Mac 上用指纹登一次,云端会话即激活。
+   - 发布时仍会要 2FA,且无人值守环境下 npm 只接受 `--otp=`,不走 WebAuthn 网页流(报 EOTP)。
+     老板的 2FA 是 Touch ID 没有 6 位码,**用 npm 恢复码当 `--otp` 可以通过**(已验证)。恢复码一次性。
+   - Safari 下载 `.tgz` 会自动解压成 `.tar`,导致 npm 报 ENOENT/corrupted;用 `curl -fL -o` 取才是原始字节。
+   - 发布完立刻 `npm logout` 清掉云端 `~/.npmrc`,不把老板的 npm 会话留在服务器上。
 
 做完 1 和 2 后,在 Mac 上:
 ```
