@@ -122,6 +122,9 @@ export function humanError(err) {
   if (missing) return t('unknownMethod', missing, appVersionSeen || t('unknown'))
   switch (err?.code) {
     case 'DENIED':
+      // 模式挡下来的和人点「拒绝」是两回事:前者要用户去 Mac 上改模式,说清楚该请谁做什么。
+      if (/readonly/i.test(err?.message || '')) return t('deniedReadonly')
+      if (/paused/i.test(err?.message || '')) return t('deniedPaused')
       return t('denied')
     case 'TIMEOUT':
       return t('timeout')
