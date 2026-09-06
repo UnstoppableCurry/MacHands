@@ -41,6 +41,50 @@
    有 ✗ 的项后面跟着 → 修复指引(通常是系统设置里某个开关),处理完再跑 `machands verify`;全过退出码 0。
    `machands perms` 单看三个系统权限,`machands check -- <命令>` 问一句会不会被放行而不执行。
 
+## 说清目的,而不是给人看命令(0.3 起)
+
+审批卡上人要看懂的是**这个 agent 想干什么**。所以会弹卡的命令都接 `--why`,给一句人话:
+
+```
+machands run --why "确认雪场地形改完之后的样子" -- godot --headless --quit
+machands input click 640 400 --why "点开授权页里的『开发者』那一项"
+```
+
+- 好:`--why "确认雪场地形改完之后的样子"` —— 说的是目的。
+- 坏:`--why "运行 screencapture"` —— 只是把命令又念了一遍,等于没说。
+
+超过 120 字会截断(卡片放不下)。接 `--why` 的命令:`run`、`put`、`get`、`shot`、`window-shot`、`record`、
+`input …`、`job submit`、`session open/write`、`open`、`clip set`、`mcp call`。
+MCP 那边这些工具的 `why` 是 **必填**,模型调用时会自己写上目的。
+
+## 升级:让 App 自己升,别重新下载(0.3 起)
+
+macOS 的系统权限是按代码签名认的,**重新下载一份装到别的地方,屏幕录制和辅助功能就会掉**,
+还得让人再勾一遍。所以升级走这条:
+
+```
+machands update --check     # 只看有没有新版本
+machands update             # 就地升级,App 自己重启,CLI 等它回来并打印新版本号
+```
+
+同一台 Mac 上**装了多份 MacHands** 是最难查的一类故障:它们抢同一个中继身份,你会看到命令时灵时不灵、
+方法忽然"不存在"、权限反复要重授。`machands doctor` 会直接把这件事说出来:
+
+```
+machands doctor
+  App       0.3.0  /Applications/MacHands.app
+  签名      Apple Development: … (TEAMID)  公证:no
+  自动更新  on
+  权限      屏幕录制 yes  辅助功能 yes  通知 yes
+  ⚠ 同一个 App 在这台 Mac 上装了 2 份,它们会互相抢同一个中继身份,你会看到时灵时不灵、方法找不到:
+      /Applications/MacHands.app
+      /Users/money/Applications/MacHands.app
+    只保留 /Applications 里那一份,把别的删掉或移走,然后重新打开 MacHands。
+```
+
+CLI 每次连上还会顺手比一下版本:App 比 CLI 旧就提醒你 `machands update`,反过来就提醒你升级这个包。
+真碰到 App 不认识的方法时,报的是「这台 Mac 上的 MacHands(0.1.0)还不支持 sys.perms」,而不是一句看不懂的原始错误。
+
 配对成功后 CLI 会打印一段可以直接复制的接入提示:
 
 ```
@@ -87,13 +131,16 @@ Cursor:       Settings → MCP → Add: npx -y machands mcp
 | `machands clip [get \| set <文本>]` | 读写 Mac 剪贴板 |
 | `machands notify <标题> [正文]` | 在 Mac 上弹一条通知 |
 | `machands power on [--seconds 3600] \| off` | 让 Mac 保持唤醒(caffeinate),跑长任务前开 |
-| `machands relaunch` | 让 MacHands.app 自己重启(升级后用) |
+| `machands relaunch` | 让 MacHands.app 自己重启 |
+| `machands update [--check]` | 让 App 就地自升级(不丢系统权限);`--check` 只看不装。升级后等它回来并打印新版本 |
+| `machands selfshot [--window main\|approval\|all] [-o out.png]` | 截 MacHands 自己的界面,**不需要屏幕录制权限**;整个桌面用 `shot` |
+| `machands show` | 打开并激活 Mac 上 MacHands 的主窗口(要请人去点授权页时用) |
 | `machands mcp` | 以 stdio MCP 服务器运行(协议 2025-06-18) |
 | `machands mcp servers` | Mac 上各家 agent 已配置的 MCP 服务器(名字 / 来源 / 命令,不含 env 值) |
 | `machands mcp open <名字>` / `open --command CMD [--args '["…"]']` | 借 Mac 的手起一个 MCP 服务器,stdout 只有 sid,工具名在 stderr |
 | `machands mcp list <sid>` / `call <sid> <工具> ['{…}']` / `close <sid>` | 列工具、调工具(文本内容直接打印,`isError` 时退出 1)、关 |
 | `machands forget <mac>` | 本地删掉这台 Mac 的配对(Mac 上的授权要在 App 设置里撤销) |
-| `machands doctor` | 自检:身份文件、中继可达、Mac 在不在线 |
+| `machands doctor` | 自检:身份文件、中继可达、Mac 在不在线,以及 App 的版本/路径/签名/公证/权限/自动更新,**装了多份会直接报警**并退出非零 |
 
 公共参数:`--mac <名字>` 指定哪台 Mac、`--json` 输出机器可读的 JSON、`--help`、`--version`。
 
@@ -105,8 +152,14 @@ Cursor:       Settings → MCP → Add: npx -y machands mcp
 
 `machands mcp` 暴露这些工具:`mac_info`、`mac_run`、`mac_put`、`mac_get`(循环分块到 eof,目录返回解包后的清单)、`mac_ls`、
 `mac_screenshot`(直接返回 PNG 图片)、`mac_open`、`mac_clipboard_get`、`mac_clipboard_set`、
-`mac_notify`、`mac_list`;0.2 新增 `mac_verify`、`mac_perms`、`mac_check`、`mac_job_*`、`mac_input_*`、
-`mac_record`、`mac_window_shot`、`mac_mcp_*`、`mac_power_assert`、`mac_policy_check`(以 `tools/list` 返回的为准)。
+`mac_notify`、`mac_list`;0.2 新增 `mac_verify`、`mac_perms`、`mac_check`、`mac_job_*`、`mac_session_*`、`mac_input`、
+`mac_record`、`mac_window_shot`、`mac_mcp_*`、`mac_power`、`mac_relaunch`;
+0.3 新增 `mac_doctor`(查装了几份、签名、权限)、`mac_update`(就地升级)、`mac_selfshot`(不需要屏幕录制权限)、
+`mac_show_window`(以 `tools/list` 返回的为准)。
+
+会弹审批卡的 13 个工具(`mac_run`、`mac_put`、`mac_get`、`mac_screenshot`、`mac_window_shot`、`mac_record`、
+`mac_input`、`mac_open`、`mac_clipboard_set`、`mac_job_submit`、`mac_session_open`、`mac_session_write`、`mac_mcp_call`)
+的 `why` 是必填的:一句人话目的,给 Mac 前的人看。
 
 ## 文件与隐私
 
@@ -125,6 +178,9 @@ Cursor:       Settings → MCP → Add: npx -y machands mcp
 | `这个配对码过期了` | 超过 10 分钟了,同上 |
 | 命令返回 77 | Mac 上点了拒绝,或者命中了黑名单 |
 | 命令返回 78 | 审批卡 120 秒没人理 |
+| `还不支持 <方法>` | 那台 Mac 上的 App 太旧。`machands update`,或在 Mac 菜单栏检查更新 |
+| 命令时灵时不灵、权限反复要重授 | 多半装了多份 App。`machands doctor` 会列出所有拷贝,只留 `/Applications` 那份 |
+| 截图报「需要授权屏幕录制」 | 勾权限;只想看 MacHands 自己的界面用 `machands selfshot`,它不需要这个权限 |
 
 ## 开发
 
@@ -161,6 +217,15 @@ click **Authorize & verify**. Then run `machands verify` here: every row `✓`, 
 New in 0.2: `use`, `verify`, `perms`, `which`, `check`, `policy`, background `job …`, interactive `session …`,
 `input …` (mouse/keyboard), `record`, `window-shot`, `mcp servers|open|list|call|close`, `power on|off`, `relaunch`,
 and `get` of a whole folder.
+
+New in 0.3: `--why "<plain-sentence purpose>"` on every command that raises an approval card — the person at the Mac
+reads that sentence, not your shell command (required on the matching MCP tools). `machands update` upgrades the app
+**in place**, because re-downloading it to a new path makes macOS drop Screen Recording and Accessibility.
+`machands doctor` now reports the app's version, path, signature, permissions and — the nastiest failure to diagnose —
+whether several copies of the app are installed and fighting over the same relay identity.
+`machands selfshot` captures MacHands' own window without Screen Recording permission; `machands show` brings its
+window to the front. The CLI also compares versions on connect and translates "unknown method" into
+"that Mac's MacHands (0.1.0) doesn't support sys.perms yet — run machands update".
 
 Every frame between agent and Mac is end-to-end encrypted (X25519 + ChaCha20-Poly1305);
 the relay only forwards ciphertext. Identity lives in `~/.machands/` with mode 0600.

@@ -75,13 +75,14 @@ test('MCP v0.2:perms / which / check / verify', async (t) => {
   const verify = await callTool('mac_verify', {})
   assert.equal(verify.isError, undefined, text(verify))
   const lines = text(verify).split('\n')
-  assert.equal(lines.length, 8, text(verify))
+  // 0.3 起多了 update 那一行,末行仍然是结论
+  assert.equal(lines.length, 9, text(verify))
   assert.deepEqual(
-    lines.slice(0, 7).map((l) => l.split(/\s+/)[1]),
-    ['run', 'fs', 'screen', 'input', 'notify', 'job', 'mcp']
+    lines.slice(0, 8).map((l) => l.split(/\s+/)[1]),
+    ['run', 'fs', 'screen', 'input', 'notify', 'job', 'mcp', 'update']
   )
-  for (const l of lines.slice(0, 7)) assert.match(l, /^✓ \S+  \S/)
-  assert.equal(lines[7], '全部通过')
+  for (const l of lines.slice(0, 8)) assert.match(l, /^✓ \S+  \S/)
+  assert.equal(lines[8], '全部通过')
 
   const info = json(await callTool('mac_info', {}))
   for (const k of ['mem_gb', 'disk_free_gb', 'cpu', 'gpu', 'displays', 'tools', 'app_version']) assert.ok(k in info, '缺 ' + k)

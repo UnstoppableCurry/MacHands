@@ -63,6 +63,36 @@ const zh = {
   powerOn: (s) => `Mac 会保持唤醒 ${s} 秒(caffeinate)。`,
   powerOff: '已解除保持唤醒。',
   relaunching: 'MacHands.app 正在重启,几秒后会重新上线。',
+  // --- v0.3:版本协商 / 自动更新 / 意图 / 自窗口截图 ---
+  verOld: (appV, cliV) =>
+    `这台 Mac 上的 MacHands 是 ${appV},本 CLI 是 ${cliV};有些命令可能不存在。跑 machands update 让它自己升级。`,
+  verNew: (appV, cliV) =>
+    `这台 Mac 上的 MacHands 是 ${appV},本 CLI 只有 ${cliV};升级一下这个包:npm i -g machands@latest`,
+  unknownMethod: (method, appV) =>
+    `这台 Mac 上的 MacHands(${appV})还不支持 ${method}。跑 machands update,或在 Mac 上从菜单栏检查更新。`,
+  updateUsage: '用法:machands update [--check](--check 只看有没有新版本,不安装)',
+  updateUpToDate: (v) => `已是最新:${v}`,
+  updateAvailable: (cur, next) => `有新版本:${cur} → ${next}(去掉 --check 就装)`,
+  updateStarting: (cur, next) => `正在更新 ${cur} → ${next}。MacHands 会自己重启,几秒后重新上线…`,
+  updateBack: (v) => `更新完成,MacHands 已回到线上:${v}`,
+  updateTimeout: 'App 没在 90 秒内回来,去 Mac 上看看(菜单栏那只手还在不在)。',
+  updateFailed: (why) => `更新失败:${why}`,
+  updateUnsupported: '这台 Mac 上的 MacHands 还不会自己更新。去官网下载新版覆盖安装,或用 machands relaunch 重启它。',
+  // doctor
+  doctorApp: (v, path) => `App       ${v}  ${path}`,
+  doctorSign: (who, notarized) => `签名      ${who}  公证:${notarized}`,
+  doctorAutoUpdate: (on) => `自动更新  ${on}`,
+  doctorPermsLine: (screen, ax, notify) => `权限      屏幕录制 ${screen}  辅助功能 ${ax}  通知 ${notify}`,
+  doctorDup: (n) => `⚠ 同一个 App 在这台 Mac 上装了 ${n} 份,它们会互相抢同一个中继身份,你会看到时灵时不灵、方法找不到:`,
+  doctorDupFix: '只保留 /Applications 里那一份,把别的删掉或移走,然后重新打开 MacHands。',
+  doctorTranslocated: '⚠ App 是从 DMG/下载目录直接跑的(App Translocation),路径每次都变,系统权限每次都要重勾。把它拖进 /Applications 再打开。',
+  doctorAppUnknown: 'App       版本太旧,不支持 app.doctor(0.3 起才有)',
+  // why
+  whyUsage: '--why 要跟一句人话,例如 --why "确认雪场地形改完之后的样子"',
+  // selfshot / show
+  selfshotSaved: (path, w, h) => `MacHands 自己的界面已存到 ${path}(${w}×${h})`,
+  showDone: 'MacHands 的主窗口已经打开并激活。',
+  screenHintSelfshot: '想看 MacHands 自己的界面可以用 machands selfshot,它不需要这个权限。',
 }
 
 const en = {
@@ -127,6 +157,33 @@ const en = {
   powerOn: (s) => `The Mac will stay awake for ${s}s (caffeinate).`,
   powerOff: 'Stay-awake released.',
   relaunching: 'MacHands.app is relaunching; it will be back online in a few seconds.',
+  // --- v0.3 ---
+  verOld: (appV, cliV) =>
+    `MacHands on that Mac is ${appV}, this CLI is ${cliV}; some commands may not exist. Run machands update to upgrade it.`,
+  verNew: (appV, cliV) =>
+    `MacHands on that Mac is ${appV}, this CLI is only ${cliV}; upgrade the package: npm i -g machands@latest`,
+  unknownMethod: (method, appV) =>
+    `MacHands on that Mac (${appV}) does not support ${method} yet. Run machands update, or check for updates from the menu bar on the Mac.`,
+  updateUsage: 'Usage: machands update [--check] (--check only looks, does not install)',
+  updateUpToDate: (v) => `Already up to date: ${v}`,
+  updateAvailable: (cur, next) => `Update available: ${cur} -> ${next} (drop --check to install)`,
+  updateStarting: (cur, next) => `Updating ${cur} -> ${next}. MacHands will relaunch itself and be back in a few seconds...`,
+  updateBack: (v) => `Update done, MacHands is back online: ${v}`,
+  updateTimeout: 'The app did not come back within 90s. Check the Mac (is the hand still in the menu bar?).',
+  updateFailed: (why) => `Update failed: ${why}`,
+  updateUnsupported: 'MacHands on that Mac cannot update itself yet. Download the new build from the site, or run machands relaunch.',
+  doctorApp: (v, path) => `app        ${v}  ${path}`,
+  doctorSign: (who, notarized) => `signature  ${who}  notarized: ${notarized}`,
+  doctorAutoUpdate: (on) => `auto-update ${on}`,
+  doctorPermsLine: (screen, ax, notify) => `perms      screen ${screen}  accessibility ${ax}  notifications ${notify}`,
+  doctorDup: (n) => `WARNING: ${n} copies of the app are installed on that Mac; they fight over the same relay identity, so calls work intermittently and methods go missing:`,
+  doctorDupFix: 'Keep only the copy in /Applications, delete or move the others, then reopen MacHands.',
+  doctorTranslocated: 'WARNING: the app is running from a DMG/Downloads folder (App Translocation); its path changes every launch, so permissions must be re-granted each time. Move it into /Applications.',
+  doctorAppUnknown: 'app        too old for app.doctor (0.3+)',
+  whyUsage: '--why needs a sentence, e.g. --why "check how the slope looks after the terrain fix"',
+  selfshotSaved: (path, w, h) => `MacHands' own window saved to ${path} (${w}x${h})`,
+  showDone: 'The MacHands main window is open and focused.',
+  screenHintSelfshot: 'To look at MacHands\' own window use machands selfshot; it does not need this permission.',
 }
 
 function pickLang() {

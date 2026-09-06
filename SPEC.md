@@ -432,3 +432,99 @@ machands get <远端目录> <本地目录>          目录自动打包/解包
 5. `machands mcp servers` 列出 Mac 上已配置的 MCP;`machands mcp tools claudex-computer-use` 非空。
 6. `machands record 3` 拉回 .mov;`machands input key c` 在 Godot 里切视角(人眼确认)。
 7. 全程审计日志无一条 `once/hour/always/timeout`。
+
+---
+
+# v0.3 修订(2026-09-06)· 发布与自动更新
+
+起因(用户原话):「app应该内置自动更新 而不是 重新下载这种更新方式导致的权限混乱
+其他agent用machands的时候就一直申请权限 还不知道什么问题了」。
+
+## 15. 发布与自动更新
+
+### 15.0 铁律(补 §0)
+
+| # | 铁律 |
+|---|---|
+| A | **正式包的 bundle id 永远是 `app.machands.MacHands`**,不可配置。开发副本用 `app.machands.MacHands.dev`。`release.sh` 对 Info.plist 与签名两处都硬断言,不等就退出 8。 |
+| B | **一台 Mac 上同一时刻只应有一份正式 App。** 多份同 bundle id 的拷贝会互抢中继身份、在系统权限面板里出现同名条目,用户以为"权限没生效"。更新走原地替换,不产生第二份。 |
+| C | **官网分发只用 Developer ID Application 证书 + 公证。** 开发证书签的包 `spctl` 拒绝,且 TCC 的指定要求绑在证书名上,每次升级掉权限。 |
+| D | 发布私钥只在发布者机器上(`~/.machands/release-key.pem`,600),不进仓库、不进 CI、不打印。 |
+
+### 15.1 为什么升级会掉系统权限
+
+TCC 记的是代码签名的**指定要求**(designated requirement),不是路径:
+
+| 签名方式 | 指定要求锚定在 | 升级后 |
+|---|---|---|
+| ad-hoc | cdhash(每次编译都变) | 必掉 |
+| Apple Development | 那张开发证书的 CN(换机/换证就变),且过不了公证 | 必掉 |
+| **Developer ID Application** | **team id `subject.OU`(不变)** | **保留** |
+
+所以修法是"换证书 + 原地替换",不是"让用户少更新"。
+
+### 15.2 appcast(官网 `/appcast.json`)
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `version` | string | marketing 版本,`1.2.3` 形状。与 `macapp/VERSION`、Info.plist 三处必须一致 |
+| `build` | number | `CFBundleVersion`,单调递增(git 提交数) |
+| `url` | string | `<host>/downloads/MacHands-<version>.zip`,必须 https(除非 host 本身是 http) |
+| `sha256` | string | zip 的 sha256,小写十六进制 |
+| `sig` | string | 用发布私钥对 **`sha256` 那串十六进制文本**做的 Ed25519 签名,**base64url**(无补位),解码后 64 字节 |
+| `notes_zh` / `notes_en` | string | 这一版的更新说明,App 里按当前语言显示 |
+| `min_os` | string | 最低 macOS,如 `13.0`。低于它不提示更新 |
+| `published` | string | ISO8601 UTC |
+
+生成:`macapp/scripts/make-appcast.sh`。签名自检(签完立刻用公钥验一遍)不过就不出文件。
+
+### 15.3 校验链(App 端,`Updater.swift`)
+
+按顺序,任一步失败即放弃本次更新并保留现有版本:
+
+1. 取 `/appcast.json`(不带缓存)。解析失败 → 放弃。
+2. `version` 或 `build` 不高于当前 → 无更新(不是错误)。
+3. `min_os` 高于当前系统 → 不提示,记一行日志。
+4. 下载 `url` 到临时目录。大小上限 200 MB。
+5. 自己算下载文件的 sha256,与 `sha256` 字段**逐字节比对**。
+6. 用**内置的** `releasePublicKey`(编译期常量,base64url,不从网上取)验 `sig` 对 `sha256` 文本的签名。
+7. 解包,对解出的 `.app` 跑 `codesign --verify --strict`,并断言其 bundle id == `app.machands.MacHands`、
+   team id 与当前运行版本相同。**team id 变了一律拒绝**(换证书要用户手动装一次)。
+8. 原地替换(§15.4),重启。
+
+第 6 步是防"官网被写入"的那一道:攻击者能改 `sha256` 与 zip,但改不出对应的 `sig`。
+
+### 15.4 原地替换规则
+
+- 目标路径 = 当前运行的 bundle 路径(`Bundle.main.bundleURL`),**不换位置**。换位置 = TCC 里换了一个条目。
+- 用 `NSFileManager.replaceItemAt`(底层 `renamex_np(RENAME_SWAP)`)做原子替换;不允许"先删后拷"。
+- 替换前:如果 bundle 路径在只读卷、或当前用户没有写权限(比如装在 `/Applications` 但用户非管理员),
+  → 不做替换,提示用户手动下载。**不提权、不调 osascript 要密码。**
+- 替换后 `open -n` 新实例 → 老实例退出(复用 `app.relaunch` 的做法)。
+- 失败回滚:替换动作本身是原子的;解包、校验都在临时目录完成,失败不触碰已装版本。
+
+### 15.5 什么时候不更新
+
+| 情形 | 行为 |
+|---|---|
+| 有正在跑的 `job.*` / `session.*` | 推迟到它们结束;`--force` 才立刻更新 |
+| 处于"暂停"状态 | 照常更新(不执行 agent 命令不代表不能升级) |
+| 从 `.dev` bundle id 启动(开发副本) | **永不自动更新** |
+| 用户在设置里关了自动更新 | 只检查、只提示,不下载 |
+
+### 15.6 版本协商(CLI ↔ App)
+
+`sys.info` 回的 `app_version` 是真源。CLI 拿到后:
+
+- CLI 主版本.次版本 **高于** App → 提示 `你的 Mac 上是 0.2.0,这个 CLI 是 0.3.0;在 Mac 上点「检查更新」或跑 machands update`。
+- App 高于 CLI → 提示升级 npm 包:`npm i -g machands@latest`。
+- 调用了 App 不认识的方法 → App 回 `BAD_PARAMS: unknown method X`,CLI 把它翻译成版本不匹配的人话,而不是原样抛错。
+
+### 15.7 验收(v0.3)
+
+1. `./scripts/release.sh --sign "Developer ID Application: …" --keychain-profile …` 一条命令跑到底,`spctl` = accepted。
+2. `curl https://<host>/appcast.json` 的 `sha256` 与 `shasum -a 256` 本地算的一致。
+3. 把 appcast 里的 `sha256` 改一个字符 → App 拒绝更新并记日志;把 `sig` 改一个字符 → 同样拒绝。
+4. 从 0.3.0 升到 0.3.1:升级后 `machands verify` 的 screen / input 两项**仍为 ✓**,用户没有重新勾过权限。
+5. 升级后 `/Applications/MacHands.app` 只有一份,`pgrep -fl MacHands` 只有一个正式进程。
+6. bundle id 被改成别的 → `release.sh` 退出 8,不产出任何包。

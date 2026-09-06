@@ -14,6 +14,16 @@ const GET_CHUNK = 512 * 1024
 const INLINE_BINARY_MAX = 256 * 1024
 
 const macProp = { mac: { type: 'string', description: '指定哪台 Mac(不填用默认)' } }
+// 审批卡上人要看懂的是"这个 agent 想干什么",不是一条 shell 命令。
+const whyProp = {
+  why: {
+    type: 'string',
+    description:
+      '用一句人话说明你要达成什么目的,会显示给 Mac 前的人看;不要复述命令。' +
+      '好:"确认雪场地形改完之后的样子";坏:"运行 screencapture"。',
+  },
+}
+const withWhy = (args, params) => (args?.why ? { ...params, why: String(args.why).slice(0, 120) } : params)
 const idProp = (name, description) => ({ [name]: { type: 'string', description } })
 
 const TOOLS = [
@@ -347,7 +357,67 @@ const TOOLS = [
     description: '让 Mac 上的 MacHands App 自己重启(装了新版本之后用)。几秒后它会重新上线。',
     inputSchema: { type: 'object', properties: { ...macProp } },
   },
+  // ---- v0.3:自更新 / 体检 / 看自己的界面 ----
+  {
+    name: 'mac_doctor',
+    description:
+      '查 Mac 上 MacHands 这个 App 本身:版本、装在哪、是不是从 DMG 直接跑的、签名、公证、三项权限、会不会自己更新,以及**是不是装了多份**。'
+      + '命令时灵时不灵、方法忽然不存在、权限反复要重授,先跑这个。',
+    inputSchema: { type: 'object', properties: { ...macProp } },
+  },
+  {
+    name: 'mac_update',
+    description:
+      '让 Mac 上的 MacHands 自己就地升级(不是重新下载装到别处 —— 那样系统权限会丢)。check=true 只看有没有新版本。'
+      + '升级后 App 自己重启,几秒内会重新上线。',
+    inputSchema: { type: 'object', properties: { check: { type: 'boolean', description: '只看不装' }, ...macProp } },
+  },
+  {
+    name: 'mac_selfshot',
+    description:
+      '截 MacHands 自己的界面(主窗口 / 审批卡),不需要屏幕录制权限 —— 屏幕录制没授权时也能看。'
+      + '要看整个桌面用 mac_screenshot。',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        window: { type: 'string', enum: ['main', 'approval', 'all'], description: '截哪个,默认 main' },
+        scale: { type: 'number' },
+        format: { type: 'string', enum: ['png', 'jpg'] },
+        out: { type: 'string', description: '本地保存路径(可选)' },
+        ...macProp,
+      },
+    },
+  },
+  {
+    name: 'mac_show_window',
+    description: '打开并激活 Mac 上 MacHands 的主窗口(要让用户去点授权页时用)。',
+    inputSchema: { type: 'object', properties: { ...macProp } },
+  },
 ]
+
+// 会弹审批卡的工具:schema 里把 why 标成必填,模型自然会写上目的。
+// 运行时是宽松的(老客户端不填也不报错),App 那边会退回显示命令本身。
+const NEEDS_WHY = new Set([
+  'mac_run',
+  'mac_put',
+  'mac_get',
+  'mac_screenshot',
+  'mac_window_shot',
+  'mac_record',
+  'mac_input',
+  'mac_open',
+  'mac_clipboard_set',
+  'mac_job_submit',
+  'mac_session_open',
+  'mac_session_write',
+  'mac_mcp_call',
+])
+for (const tool of TOOLS) {
+  if (!NEEDS_WHY.has(tool.name)) continue
+  tool.inputSchema.properties = { ...tool.inputSchema.properties, ...whyProp }
+  tool.inputSchema.required = [...new Set([...(tool.inputSchema.required || []), 'why'])]
+  tool.description += ' 必须填 why:一句人话说明你要达成什么,Mac 前的人看到的是它。'
+}
 
 const textResult = (text) => ({ content: [{ type: 'text', text }] })
 const errResult = (text) => ({ content: [{ type: 'text', text }], isError: true })
@@ -412,7 +482,7 @@ export async function callTool(name, args = {}) {
         const timeout = Number(args.timeout) || 600
         const r = await s.request(
           'run',
-          { cmd: args.cmd, cwd: args.cwd, timeout },
+          withWhy(args, { cmd: args.cmd, cwd: args.cwd, timeout }),
           {
             timeoutMs: timeout * 1000 + 130_000,
             onStream: (x) => {
@@ -429,7 +499,7 @@ export async function callTool(name, args = {}) {
     case 'mac_put':
       return withMac(args.mac, async (s) => {
         const data = args.base64 ?? Buffer.from(args.content ?? '', 'utf8').toString('base64')
-        const r = await s.request('fs.put', { path: args.path, data }, { timeoutMs: 180_000 })
+        const r = await s.request('fs.put', withWhy(args, { path: args.path, data }), { timeoutMs: 180_000 })
         return textResult(`已写入 ${args.path}(${r.bytes ?? '?'} 字节)`)
       })
     case 'mac_get':
@@ -440,7 +510,7 @@ export async function callTool(name, args = {}) {
         for (;;) {
           const r = await s.request(
             'fs.get',
-            { path: args.path, offset, length: GET_CHUNK },
+            withWhy(args, { path: args.path, offset, length: GET_CHUNK }),
             { timeoutMs: 300_000, onStream: (x) => x.data && parts.push(Buffer.from(x.data, 'base64')) }
           )
           if (r.archive) {
@@ -489,7 +559,7 @@ export async function callTool(name, args = {}) {
       })
     case 'mac_screenshot':
       return withMac(args.mac, async (s) => {
-        const { r, buf } = await collectStream(s, 'screen.shot', { display: args.display ?? 0, scale: args.scale ?? 0.5, format: 'png' }, 180_000)
+        const { r, buf } = await collectStream(s, 'screen.shot', withWhy(args, { display: args.display ?? 0, scale: args.scale ?? 0.5, format: 'png' }), 180_000)
         return imageResult(buf, r, 'png')
       })
     case 'mac_window_shot':
@@ -498,7 +568,7 @@ export async function callTool(name, args = {}) {
         const { r, buf } = await collectStream(
           s,
           'screen.window',
-          { app: args.app, title: args.title, scale: args.scale ?? 0.5, format },
+          withWhy(args, { app: args.app, title: args.title, scale: args.scale ?? 0.5, format }),
           180_000
         )
         let note = ''
@@ -508,7 +578,7 @@ export async function callTool(name, args = {}) {
     case 'mac_record':
       return withMac(args.mac, async (s) => {
         const seconds = Math.min(120, Math.max(1, Number(args.seconds) || 5))
-        const { r, buf } = await collectStream(s, 'screen.record', { seconds, display: args.display ?? 0 }, seconds * 1000 + 180_000)
+        const { r, buf } = await collectStream(s, 'screen.record', withWhy(args, { seconds, display: args.display ?? 0 }), seconds * 1000 + 180_000)
         if (buf.length === 0) return errResult('没拿到视频数据。可能是 Mac 上还没授权屏幕录制(用 mac_perms 查)。')
         const target = saveTo(args.out || join(tmpdir(), `machands-record-${Date.now()}.mov`), buf)
         if (r.bytes != null && r.bytes !== buf.length) return errResult(`录屏不完整:Mac 说 ${r.bytes} 字节,收到 ${buf.length} 字节。文件在 ${target}`)
@@ -519,26 +589,26 @@ export async function callTool(name, args = {}) {
         const t = 60_000
         switch (args.action) {
           case 'where': {
-            const r = await s.request('input.where', {}, { timeoutMs: t })
+            const r = await s.request('input.where', withWhy(args, {}), { timeoutMs: t })
             return textResult(JSON.stringify({ x: r.x, y: r.y }))
           }
           case 'move':
-            await s.request('input.move', { x: args.x, y: args.y }, { timeoutMs: t })
+            await s.request('input.move', withWhy(args, { x: args.x, y: args.y }), { timeoutMs: t })
             return textResult(`光标已移到 (${args.x},${args.y})`)
           case 'click':
-            await s.request('input.click', { x: args.x, y: args.y, button: args.button || 'left', count: args.count || 1 }, { timeoutMs: t })
+            await s.request('input.click', withWhy(args, { x: args.x, y: args.y, button: args.button || 'left', count: args.count || 1 }), { timeoutMs: t })
             return textResult(`已${args.count > 1 ? '双' : ''}击 (${args.x},${args.y})${args.button === 'right' ? ' 右键' : ''}`)
           case 'drag':
-            await s.request('input.drag', { x1: args.x, y1: args.y, x2: args.x2, y2: args.y2, ms: args.ms || 300 }, { timeoutMs: t })
+            await s.request('input.drag', withWhy(args, { x1: args.x, y1: args.y, x2: args.x2, y2: args.y2, ms: args.ms || 300 }), { timeoutMs: t })
             return textResult(`已从 (${args.x},${args.y}) 拖到 (${args.x2},${args.y2})`)
           case 'scroll':
-            await s.request('input.scroll', { x: args.x, y: args.y, dx: args.dx || 0, dy: args.dy || 0 }, { timeoutMs: t })
+            await s.request('input.scroll', withWhy(args, { x: args.x, y: args.y, dx: args.dx || 0, dy: args.dy || 0 }), { timeoutMs: t })
             return textResult(`已在 (${args.x},${args.y}) 滚动 dx=${args.dx || 0} dy=${args.dy || 0}`)
           case 'key':
-            await s.request('input.key', { key: args.key, mods: args.mods || [] }, { timeoutMs: t })
+            await s.request('input.key', withWhy(args, { key: args.key, mods: args.mods || [] }), { timeoutMs: t })
             return textResult(`已按 ${(args.mods || []).concat([args.key]).join('+')}`)
           case 'type':
-            await s.request('input.type', { text: args.text ?? '' }, { timeoutMs: t })
+            await s.request('input.type', withWhy(args, { text: args.text ?? '' }), { timeoutMs: t })
             return textResult(`已输入 ${(args.text ?? '').length} 个字符`)
           default:
             return errResult(`action 只能是 where/move/click/drag/scroll/key/type,不是 ${args.action}`)
@@ -546,14 +616,14 @@ export async function callTool(name, args = {}) {
       })
     case 'mac_open':
       return withMac(args.mac, async (s) => {
-        await s.request('open', { target: args.target }, { timeoutMs: 130_000 })
+        await s.request('open', withWhy(args, { target: args.target }), { timeoutMs: 130_000 })
         return textResult(`已在 Mac 上打开 ${args.target}`)
       })
     case 'mac_clipboard_get':
       return withMac(args.mac, async (s) => textResult((await s.request('clip.get', {}, { timeoutMs: 130_000 })).text ?? ''))
     case 'mac_clipboard_set':
       return withMac(args.mac, async (s) => {
-        await s.request('clip.set', { text: args.text }, { timeoutMs: 130_000 })
+        await s.request('clip.set', withWhy(args, { text: args.text }), { timeoutMs: 130_000 })
         return textResult('已写入 Mac 剪贴板。')
       })
     case 'mac_notify':
@@ -585,7 +655,7 @@ export async function callTool(name, args = {}) {
       })
     case 'mac_job_submit':
       return withMac(args.mac, async (s) => {
-        const r = await s.request('job.submit', { cmd: args.cmd, cwd: args.cwd, env: args.env, timeout: args.timeout }, { timeoutMs: 60_000 })
+        const r = await s.request('job.submit', withWhy(args, { cmd: args.cmd, cwd: args.cwd, env: args.env, timeout: args.timeout }), { timeoutMs: 60_000 })
         return textResult(pretty({ jobId: r.jobId }))
       })
     case 'mac_job_status':
@@ -620,13 +690,13 @@ export async function callTool(name, args = {}) {
       return withMac(args.mac, async (s) => textResult(pretty((await s.request('job.list', {}, { timeoutMs: 30_000 })).jobs || [])))
     case 'mac_session_open':
       return withMac(args.mac, async (s) => {
-        const r = await s.request('session.open', { cmd: args.cmd, cwd: args.cwd, env: args.env }, { timeoutMs: 60_000 })
+        const r = await s.request('session.open', withWhy(args, { cmd: args.cmd, cwd: args.cwd, env: args.env }), { timeoutMs: 60_000 })
         return textResult(pretty({ sessionId: r.sessionId }))
       })
     case 'mac_session_write':
       return withMac(args.mac, async (s) => {
         const data = args.newline === false ? String(args.data ?? '') : String(args.data ?? '') + '\n'
-        await s.request('session.write', { sessionId: args.sessionId, data }, { timeoutMs: 60_000 })
+        await s.request('session.write', withWhy(args, { sessionId: args.sessionId, data }), { timeoutMs: 60_000 })
         return textResult(`已写入 ${data.length} 个字符`)
       })
     case 'mac_session_read':
@@ -656,7 +726,7 @@ export async function callTool(name, args = {}) {
         const timeout = Math.min(600, Math.max(5, Number(args.timeout) || 120))
         const r = await s.request(
           'mcp.call',
-          { sessionId: args.sessionId, tool: args.tool, args: args.args || {}, timeout },
+          withWhy(args, { sessionId: args.sessionId, tool: args.tool, args: args.args || {}, timeout }),
           { timeoutMs: timeout * 1000 + 60_000 }
         )
         // MCP 的 result 原样透传:content 是数组就直接给(文本/图片都能过),否则整个包成文本
@@ -683,6 +753,53 @@ export async function callTool(name, args = {}) {
         await s.request('app.relaunch', {}, { timeoutMs: 30_000 })
         return textResult('MacHands 正在重启,几秒后重新上线;这期间的调用会报离线。')
       })
+    // ---- v0.3 ----
+    case 'mac_doctor':
+      return withMac(args.mac, async (s) => {
+        const d = await s.request('app.doctor', {}, { timeoutMs: 60_000 })
+        const copies = (Array.isArray(d.duplicates) ? d.duplicates : []).filter(Boolean)
+        const extra = copies.filter((c) => c !== d.path)
+        const notes = []
+        if (extra.length) {
+          notes.push(
+            `⚠ 这台 Mac 上装了不止一份 MacHands,它们抢同一个中继身份 —— 命令会时灵时不灵、方法会忽然"不存在"。` +
+              `只留 /Applications 里那份,其余删掉后重开:\n` +
+              [d.path, ...extra].filter(Boolean).map((c) => '  ' + c).join('\n')
+          )
+        }
+        if (d.translocated) notes.push('⚠ App 是从 DMG/下载目录直接跑的,路径每次都变,系统权限每次都要重勾。把它拖进 /Applications。')
+        if (d.auto_update === false) notes.push('自动更新是关的:升级要人工重装,而重装会让系统权限掉一次。')
+        return textResult([pretty(d), ...notes].join('\n\n'))
+      })
+    case 'mac_update':
+      return withMac(args.mac, async (s) => {
+        const r = (await s.request('app.update', { check: Boolean(args.check) }, { timeoutMs: 300_000 })) || {}
+        if (r.status === 'failed') return errResult(`更新失败:${r.reason || '没说原因'}(当前 ${r.current})`)
+        if (r.status === 'updating') {
+          return textResult(`MacHands 正在从 ${r.current} 升级到 ${r.latest},它会自己重启;等几秒再调 mac_info 确认版本。`)
+        }
+        if (r.latest && r.latest !== r.current) return textResult(`有新版本:${r.current} → ${r.latest}(check=false 就装)`)
+        return textResult(`已是最新:${r.current}`)
+      })
+    case 'mac_selfshot':
+      return withMac(args.mac, async (s) => {
+        const format = args.format === 'jpg' ? 'jpg' : 'png'
+        const { r, buf } = await collectStream(
+          s,
+          'screen.selfshot',
+          { window: args.window || 'main', scale: args.scale ?? 1, format },
+          120_000
+        )
+        if (buf.length === 0) return errResult('没拿到图像。这台 Mac 上的 MacHands 可能还不支持 screen.selfshot(0.3 起才有)。')
+        const note = args.out ? `已保存到 ${saveTo(args.out, buf)}` : ''
+        const windows = Array.isArray(r.windows) ? r.windows.map((w) => `${w.title}(${w.w}×${w.h})`).join('、') : ''
+        return imageResult(buf, r, format, [note, windows].filter(Boolean).join(';'))
+      })
+    case 'mac_show_window':
+      return withMac(args.mac, async (s) => {
+        await s.request('app.showWindow', {}, { timeoutMs: 30_000 })
+        return textResult('MacHands 主窗口已打开并激活。')
+      })
     default:
       return errResult(`没有 ${name} 这个工具。`)
   }
@@ -702,7 +819,11 @@ export async function handleRPC(msg) {
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'machands', version: VERSION },
         instructions:
-          '这些工具作用在用户的 Mac 上。用户可能会看到审批卡,被拒绝时会返回 DENIED;先用 mac_check 干跑可以预判。长任务用 mac_job_submit,别用 mac_run 干等。',
+          '这些工具作用在用户的 Mac 上。会弹审批卡的工具都要填 why —— 一句人话说明你想达成什么,' +
+          '用户看到的是这句话而不是命令本身;不要在 why 里复述命令。' +
+          '被拒绝时返回 DENIED,先用 mac_check 干跑可以预判。长任务用 mac_job_submit,别用 mac_run 干等。' +
+          '出现"方法不存在"、权限反复要重授、或者命令时灵时不灵,先跑 mac_doctor(多半是那台 Mac 上装了多份 App),' +
+          '需要升级就用 mac_update。屏幕录制没授权时,mac_selfshot 仍然能看到 MacHands 自己的界面。',
       })
     case 'notifications/initialized':
     case 'notifications/cancelled':

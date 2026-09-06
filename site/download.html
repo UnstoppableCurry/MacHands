@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>下载 MacHands · Download MacHands</title>
+<meta name="description" content="MacHands — 给云端 AI 代理一双 Mac 上的手。Give your cloud AI agent a pair of hands on your Mac.">
+<style>
+  :root{
+    --bg:#fbfbfa; --card:#fff; --fg:#1a1a18; --muted:#6b6b66; --line:#e4e4df;
+    --accent:#1f6feb; --accent-fg:#fff; --code-bg:#f2f2ee; --warn-bg:#fff8e6; --warn-line:#e8d9a8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16161a; --card:#1e1e23; --fg:#ececea; --muted:#9b9b96; --line:#2e2e35;
+      --accent:#4c8dff; --accent-fg:#0b0b0d; --code-bg:#26262c; --warn-bg:#2a2418; --warn-line:#4a3f22;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:56px 22px 72px}
+  h1{font-size:30px; line-height:1.25; margin:0 0 6px; letter-spacing:-.01em}
+  .en{color:var(--muted); font-size:14px; margin:0}
+  .lede{margin:18px 0 0; font-size:17px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px; margin:26px 0}
+  .dl{display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:22px 0 8px}
+  a.btn{
+    display:inline-block; background:var(--accent); color:var(--accent-fg);
+    text-decoration:none; font-weight:600; font-size:16px;
+    padding:13px 24px; border-radius:9px;
+  }
+  a.btn:hover{filter:brightness(1.08)}
+  .meta{color:var(--muted); font-size:13px}
+  h2{font-size:17px; margin:0 0 12px; letter-spacing:-.005em}
+  h2 span{color:var(--muted); font-weight:400; font-size:13px; margin-left:8px}
+  ul{margin:0; padding-left:20px}
+  li{margin:9px 0}
+  li .en{display:block; margin-top:1px}
+  code{background:var(--code-bg); padding:1.5px 6px; border-radius:5px; font-size:13.5px;
+       font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .note{background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:9px;
+        padding:13px 16px; font-size:14px; margin:16px 0 0}
+  footer{color:var(--muted); font-size:13px; border-top:1px solid var(--line);
+         margin-top:40px; padding-top:20px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>MacHands</h1>
+  <p class="en">Give your cloud AI agent a pair of hands on your Mac.</p>
+  <p class="lede">
+    给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。
+    <span class="en">Claude Code、Codex、Cursor 跑在云端时碰不到 Xcode、模拟器、Safari、公证 —— MacHands 让它们用你自己的 Mac 干这些活。</span>
+  </p>
+
+  <div class="dl">
+    <a class="btn" id="dl" href="/downloads/MacHands-0.3.0.zip" download>下载 MacHands <span id="ver">0.3.0</span></a>
+    <span class="meta" id="meta">macOS 13 或更新 · Apple 芯片与 Intel 通用 · 已经过苹果公证<br>
+      <span class="en">macOS 13+ · Universal (Apple silicon &amp; Intel) · Notarized by Apple</span></span>
+  </div>
+
+  <div class="card">
+    <h2>装好之后怎么开始 <span>Getting started</span></h2>
+    <ul>
+      <li>把 <code>MacHands.app</code> 拖进「应用程序」,双击打开。菜单栏会出现一只手。
+        <span class="en">Drag <code>MacHands.app</code> into Applications and open it. A hand appears in the menu bar.</span></li>
+      <li>点菜单里的 <strong>复制给 agent</strong>,把那段文字贴给你的云端 agent。
+        <span class="en">Click <strong>Copy for agent</strong> and paste the block into your cloud agent.</span></li>
+      <li>配对成功后会弹出<strong>授权页</strong>:选一次范围,点「授权并验证」。之后不再打扰。
+        <span class="en">Once paired, pick an access scope once and hit Authorize &amp; verify. It won't ask again.</span></li>
+    </ul>
+    <div class="note">
+      这个包经过苹果公证,双击就能打开。<br>
+      万一系统说「无法打开」,那多半是下载被截断了 —— 重新下一次;或者右键点 App → <strong>打开</strong>。
+      <span class="en">This build is notarized, so a double-click is enough. If macOS still refuses, re-download; or right-click the app → <strong>Open</strong>.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>它会问你三项系统权限 <span>Three system permissions</span></h2>
+    <ul>
+      <li><strong>通知</strong> — 命令跑完、需要你决定时,能提醒你一声。
+        <span class="en"><strong>Notifications</strong> — so the agent can tell you a job finished or needs you.</span></li>
+      <li><strong>屏幕录制</strong> — 代理要截屏或录屏给你看结果时用。
+        <span class="en"><strong>Screen Recording</strong> — for screenshots and screen recordings.</span></li>
+      <li><strong>辅助功能</strong> — 代理要动键盘鼠标(点按钮、试手感)时用。
+        <span class="en"><strong>Accessibility</strong> — for keyboard and mouse control.</span></li>
+    </ul>
+    <p class="meta" style="margin:14px 0 0">
+      三项都可以随时在「系统设置 → 隐私与安全性」里收回;不给也能用,只是对应的能力不可用。
+      <span class="en">All three are revocable in System Settings → Privacy &amp; Security. MacHands still works without them, minus those abilities.</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>升级由 App 自己完成 <span>Updates are built in</span></h2>
+    <p style="margin:0">
+      装好这一版之后就不用再来这个页面了:MacHands 会自己检查新版本、验证签名、原地替换并重启。
+      <strong>升级后不需要重新授权</strong>系统权限。
+    </p>
+    <p class="en" style="margin:8px 0 0">
+      You only download once. MacHands checks for updates itself, verifies the signature, replaces itself in place and relaunches — and your system permissions survive the upgrade.
+    </p>
+  </div>
+
+  <footer>
+    MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。<br>
+    <span class="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span>
+  </footer>
+
+</div>
+
+<script>
+// 下载链接与版本号以 appcast.json 为准,这样发新版只要传两个文件,页面不用改。
+// 拿不到就用上面写死的那份,页面照样能用。
+fetch('/appcast.json', { cache: 'no-store' })
+  .then(function (r) { return r.ok ? r.json() : null })
+  .then(function (a) {
+    if (!a || !a.url || !a.version) return
+    document.getElementById('dl').href = a.url
+    document.getElementById('ver').textContent = a.version
+    if (a.min_os) {
+      var m = document.getElementById('meta')
+      m.innerHTML = m.innerHTML.replace(/macOS 13/g, 'macOS ' + a.min_os.split('.')[0])
+    }
+  })
+  .catch(function () {})
+</script>
+</body>
+</html>

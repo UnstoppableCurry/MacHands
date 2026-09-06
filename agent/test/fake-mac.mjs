@@ -87,6 +87,16 @@ function loadIdentity(dir) {
 
 const expand = (p) => (p?.startsWith('~') ? join(homedir(), p.slice(1)) : p)
 
+// 默认冒充"和这个 CLI 同版本"的 App;测试要模拟旧 App 就传 appVersion
+const PKG_VERSION = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../package.json'), 'utf8')).version
+
+const cmpV = (a, b) => {
+  const na = String(a ?? '').split('.').map((x) => parseInt(x, 10) || 0)
+  const nb = String(b ?? '').split('.').map((x) => parseInt(x, 10) || 0)
+  for (let i = 0; i < 3; i++) if ((na[i] || 0) !== (nb[i] || 0)) return (na[i] || 0) < (nb[i] || 0) ? -1 : 1
+  return 0
+}
+
 // 与 Executor.chunkBytes / Executor.maxRead 一致
 const STREAM_CHUNK = 96 * 1024
 const MAX_READ = 512 * 1024
@@ -134,7 +144,9 @@ function tarDirectory(path) {
 
 export function makeHandlers(opts = {}) {
   let clipboard = ''
+  let appVer = opts.appVersion || PKG_VERSION
   const log = []
+  const calls = [] // 每次调用记一条 {m, why},测 --why 有没有透传
   // 三项系统权限;测试可以传 perms:{screen:false,...} 模拟没授权的 Mac
   const perms = { screen: true, accessibility: true, notifications: 'authorized', ...(opts.perms || {}) }
   const inputs = [] // 每次 input.* 调用记一条 {m, ...p}
@@ -230,7 +242,7 @@ export function makeHandlers(opts = {}) {
       gpu: 'Fake GPU 1G',
       displays: [{ id: 0, cgId: 1, w: 1, h: 1, main: true }],
       tools: await handlers['sys.which']({}),
-      app_version: '0.2.0',
+      app_version: appVer,
     }),
     'sys.perms': async () => ({
       screen: Boolean(perms.screen),
@@ -531,6 +543,53 @@ export function makeHandlers(opts = {}) {
       log.push({ relaunch: true })
       return {}
     },
+    // 自窗口截图:App 自己渲染,不碰屏幕录制权限,所以 perms.screen=false 也照样能用
+    'screen.selfshot': async (p, ctx) => {
+      const which = ['main', 'approval', 'all'].includes(p?.window) ? p.window : 'main'
+      const bytes = streamBuffer(ctx, TINY_PNG)
+      const body = { width: 1, height: 1, bytes }
+      if (which === 'all') {
+        body.windows = [
+          { title: 'MacHands', w: 1, h: 1, bytes },
+          { title: '审批', w: 1, h: 1, bytes },
+        ]
+      }
+      log.push({ selfshot: which })
+      return body
+    },
+    'app.showWindow': async () => {
+      log.push({ showWindow: true })
+      return {}
+    },
+    'app.doctor': async () => ({
+      version: appVer,
+      path: opts.appPath || '/Applications/MacHands.app',
+      translocated: Boolean(opts.translocated),
+      duplicates: Array.isArray(opts.duplicates) ? opts.duplicates : [],
+      signed_by: opts.signedBy || 'Apple Development: fake (TEAMID)',
+      notarized: opts.notarized === undefined ? false : opts.notarized,
+      dr: 'identifier "app.machands.MacHands" and anchor apple generic',
+      perms: {
+        screen: Boolean(perms.screen),
+        accessibility: Boolean(perms.accessibility),
+        notifications: String(perms.notifications),
+      },
+      auto_update: opts.autoUpdate !== false,
+    }),
+    'app.update': async (p) => {
+      const latest = opts.latest || appVer
+      if (cmpV(latest, appVer) <= 0) return { status: 'up-to-date', current: appVer, latest }
+      if (opts.updateFails) return { status: 'failed', current: appVer, latest, reason: String(opts.updateFails) }
+      if (p?.check) return { status: 'available', current: appVer, latest }
+      log.push({ update: { from: appVer, to: latest } })
+      const from = appVer
+      // 真 App 在这里换二进制再重启;假 Mac 只是过一会儿改口说自己是新版本
+      const timer = setTimeout(() => {
+        appVer = latest
+      }, 200)
+      timer.unref?.()
+      return { status: 'updating', current: from, latest }
+    },
     'verify.run': async () => {
       const row = (name, ok, detail, fix) => (ok || !fix ? { name, ok, detail } : { name, ok, detail, fix })
       const notifyOK = perms.notifications === 'authorized'
@@ -543,11 +602,22 @@ export function makeHandlers(opts = {}) {
           row('notify', notifyOK, String(perms.notifications), '需要在 Mac 上允许 MacHands 发通知'),
           row('job', true, 'code=0 out=job-ok'),
           row('mcp', true, FAKE_SERVERS.map((s) => s.name).join(', ')),
+          row('update', opts.autoUpdate !== false, opts.autoUpdate !== false ? `自动更新已开(${appVer})` : '自动更新关着', '在 MacHands 设置里打开自动更新'),
         ],
       }
     },
   }
-  return { handlers, log, inputs, jobs, sessions, mcpSessions, perms, getClipboard: () => clipboard }
+  // 包一层:记下每次调用带没带 why(测意图透传);opts.omit 里的方法当作"这个 App 太旧还没有"
+  const omit = new Set(Array.isArray(opts.omit) ? opts.omit : [])
+  const wrapped = {}
+  for (const [name, fn] of Object.entries(handlers)) {
+    if (omit.has(name)) continue
+    wrapped[name] = (p = {}, ctx) => {
+      calls.push({ m: name, why: p?.why })
+      return fn(p, ctx)
+    }
+  }
+  return { handlers: wrapped, log, calls, inputs, jobs, sessions, mcpSessions, perms, getClipboard: () => clipboard }
 }
 
 export async function startFakeMac(input) {
@@ -563,7 +633,7 @@ export async function startFakeMac(input) {
   const client = new RelayClient({ host, port, role: 'mac', identity, name: opts.name, reconnect: false })
   await client.connect()
 
-  const { handlers, log, inputs, jobs, sessions: shellSessions, mcpSessions, perms, getClipboard } = makeHandlers(opts)
+  const { handlers, log, calls, inputs, jobs, sessions: shellSessions, mcpSessions, perms, getClipboard } = makeHandlers(opts)
   const sessions = new Map()
 
   function sessionFor(agentId, agentXPub) {
@@ -633,6 +703,7 @@ export async function startFakeMac(input) {
     token,
     code,
     log,
+    calls,
     inputs,
     jobs,
     shellSessions,

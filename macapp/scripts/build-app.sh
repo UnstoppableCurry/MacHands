@@ -40,6 +40,7 @@ SIGN_ID="-"
 DO_INSTALL=0
 DO_CLEAN=0
 UNIVERSAL=0
+HARDENED=0
 
 if [ -t 1 ]; then
   R=$'\033[31m'; G=$'\033[32m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; Z=$'\033[0m'
@@ -71,6 +72,7 @@ usage() {
   --install          顺手拷进 /Applications
   --no-build         跳过 swift build,直接重新打包已有的二进制
   --clean            先清掉输出目录(给两次连 .build 一起清)
+  --hardened-runtime 强化运行时 + 可信时间戳(公证的前提;要真证书,不能 adhoc)
   -h, --help
 EOF
 }
@@ -93,6 +95,7 @@ while [ "$#" -gt 0 ]; do
     --install)   DO_INSTALL=1; shift ;;
     --no-build)  DO_BUILD=0; shift ;;
     --clean)     DO_CLEAN=1; CLEAN_LEVEL=$((CLEAN_LEVEL+1)); shift ;;
+    --hardened-runtime) HARDENED=1; shift ;;
     -h|--help)   usage; exit 0 ;;
     *)           die 2 "不认识的选项:$1" "./scripts/build-app.sh --help" ;;
   esac
@@ -224,6 +227,13 @@ fi
 xattr -cr "$NEW" 2>/dev/null || true
 
 # --------------------------------------------------------------------------- #
+if [ "$HARDENED" = 1 ]; then
+  [ "$DO_SIGN" = 1 ] || die 2 "--hardened-runtime 要配 --sign 一起用。" \
+      './scripts/build-app.sh --sign "Developer ID Application: 名字 (TEAMID)" --hardened-runtime'
+  [ "$SIGN_ID" != "-" ] || die 2 "ad-hoc 签名开强化运行时没有意义(苹果不会公证 ad-hoc 的包)。" \
+      "要发布就用 Developer ID 证书;要本机跑就别加 --hardened-runtime"
+fi
+
 if [ "$DO_SIGN" = 1 ]; then
   if [ "$SIGN_ID" = "-" ]; then
     step "签名(ad-hoc)"
@@ -242,6 +252,11 @@ if [ "$DO_SIGN" = 1 ]; then
       || die 4 "用 '$SIGN_ID' 签名失败" "看看你有哪些证书:security find-identity -v -p codesigning"
   fi
   codesign --verify --strict --verbose=2 "$NEW" 2>&1 | sed 's/^/    /' || true
+  # 指定要求(DR)决定了 TCC 认不认这还是"同一个 App"。
+  # Developer ID 的 DR 只写死 team + bundle id,跨版本稳定 → 升级后权限还在。
+  # 开发证书/ad-hoc 的 DR 绑在具体证书或 cdhash 上 → 每次重编都要重新授权。
+  DR=$(codesign -d -r- "$NEW" 2>/dev/null | sed -n 's/^designated => //p')
+  [ -n "$DR" ] && info "指定要求:$DR"
 else
   info "没签名(要本机签名加 --sign adhoc)"
   info "未签名的 App 也能跑,但用 SMAppService 注册登录项时带签名更可靠。"

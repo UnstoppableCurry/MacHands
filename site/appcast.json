@@ -1,0 +1,11 @@
+{
+  "version": "0.3.0",
+  "build": 21,
+  "url": "https://machands.app/downloads/MacHands-0.3.0.zip",
+  "sha256": "60a9c10f3c570b23bb90ff6218270b49fc87c80e4f9ac4c7b0e004070994bf39",
+  "sig": "6qAhL7gK0yAO4SMwS_ao1mo1qjP8QADFeNtLScuNg0DP1tmv4S1z-Vw_bKyBDURgSiEkurM2NwpN1qJ_PQqeDQ",
+  "notes_zh": "内置自动更新:App 自己检查、验签、原地替换并重启,升级后不用重新授权系统权限。\n审批卡先说\"要干什么\",命令收进「详情」。",
+  "notes_en": "Built-in updates: MacHands verifies, replaces itself in place and relaunches — system permissions survive. Approval cards now lead with intent, not the raw command.",
+  "min_os": "13.0",
+  "published": "2026-09-06T11:50:27Z"
+}

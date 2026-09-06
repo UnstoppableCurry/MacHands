@@ -9,7 +9,7 @@ import { RpcSession, RpcError, attach } from './rpc.mjs'
 import { t } from './i18n.mjs'
 import { b64u, unb64u, genEd25519, genX25519, newId, parsePairingCode } from './crypto.mjs'
 
-export const VERSION = '0.2.0'
+export const VERSION = '0.3.0'
 export const EXIT = { OK: 0, NOT_PAIRED: 66, OFFLINE: 69, LICENSE: 75, DENIED: 77, TIMEOUT: 78, FAIL: 1 }
 const CHUNK = 384 * 1024 // 上传分块(base64 后仍远小于 1 MiB)
 const GET_CHUNK = 512 * 1024 // ≤ 768 KiB/次
@@ -118,6 +118,8 @@ export function exitCodeFor(err) {
 }
 
 export function humanError(err) {
+  const missing = unknownMethodOf(err)
+  if (missing) return t('unknownMethod', missing, appVersionSeen || t('unknown'))
   switch (err?.code) {
     case 'DENIED':
       return t('denied')
@@ -129,14 +131,68 @@ export function humanError(err) {
       return t('license')
     case 'OFFLINE':
       return err.message
-    default:
-      return err?.message || String(err)
+    default: {
+      const raw = err?.message || String(err)
+      // 屏幕录制没授权时,顺手告诉他还有个不需要授权的办法
+      if (/屏幕录制|screen recording/i.test(raw)) return `${raw} ${t('screenHintSelfshot')}`
+      return raw
+    }
   }
+}
+
+// ---------- 版本协商(SPEC §13) ----------
+// agent 最常见的困惑是"这条命令怎么没了" —— 其实是 Mac 上的 App 太旧。
+// 连上就顺手拿一次 app_version,不一致就在 stderr 说一句,一个进程只说一次。
+
+let appVersionSeen = null
+let versionNoticeShown = false
+
+export function cmpVersion(a, b) {
+  const na = String(a ?? '').split('.').map((x) => parseInt(x, 10) || 0)
+  const nb = String(b ?? '').split('.').map((x) => parseInt(x, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    const d = (na[i] || 0) - (nb[i] || 0)
+    if (d) return d < 0 ? -1 : 1
+  }
+  return 0
+}
+
+/** 从一个 RPC 错误里认出"这个方法 Mac 上没有"。App 说 unknown method,假 Mac 说没有这个方法。 */
+export function unknownMethodOf(err) {
+  const msg = String(err?.message ?? '')
+  const m = msg.match(/unknown method\s+([\w.]+)/i) || msg.match(/没有这个方法[::]\s*([\w.]+)/)
+  return m ? m[1] : null
+}
+
+export function appVersion() {
+  return appVersionSeen
+}
+
+async function probeVersion(session) {
+  if (process.env.MACHANDS_NO_VERSION_CHECK === '1') return null
+  let info = null
+  try {
+    info = await session.request('sys.info', {}, { timeoutMs: 15_000 })
+  } catch {
+    return null // 拿不到就算了,别拿体检失败挡住正事
+  }
+  const appV = info?.app_version
+  if (typeof appV === 'string' && appV) {
+    appVersionSeen = appV
+    if (!versionNoticeShown) {
+      const d = cmpVersion(appV, VERSION)
+      if (d !== 0) {
+        warn(d < 0 ? t('verOld', appV, VERSION) : t('verNew', appV, VERSION))
+        versionNoticeShown = true
+      }
+    }
+  }
+  return info
 }
 
 // ---------- 连接 ----------
 
-export async function connect({ mac, waitMs = 4000 } = {}) {
+export async function connect({ mac, waitMs = 4000, quiet = false } = {}) {
   const identity = loadIdentity()
   const store = loadPairings()
   const pairing = resolveMac(store, mac)
@@ -173,13 +229,14 @@ export async function connect({ mac, waitMs = 4000 } = {}) {
       throw new CliError(t('offline', pairing.macName), EXIT.OFFLINE)
     }
   }
-  return { client, session, pairing, identity }
+  const info = quiet ? null : await probeVersion(session)
+  return { client, session, pairing, identity, info }
 }
 
 // ---------- 参数 ----------
 
 // 这些开关从不带值,后面紧跟的词是位置参数(machands input click --right 10 20)。
-const BOOL_FLAGS = new Set(['json', 'help', 'version', 'default', 'tls', 'right', 'double', 'follow', 'err', 'raw', 'no-extract'])
+const BOOL_FLAGS = new Set(['json', 'help', 'version', 'default', 'tls', 'right', 'double', 'follow', 'err', 'raw', 'no-extract', 'check'])
 
 export function parseArgs(argv) {
   const out = { _: [], flags: {}, rest: [] }
@@ -206,6 +263,25 @@ export function parseArgs(argv) {
 
 const say = (s) => process.stdout.write(s + '\n')
 const warn = (s) => process.stderr.write(s + '\n')
+
+// ---------- 意图(SPEC §10.6) ----------
+// 审批卡上人要看懂的是"这个 agent 想干什么",不是一条 shell 命令。
+// 所以每条会弹卡的请求都可以带一句人话目的,超过 120 字截断(卡片放不下)。
+const WHY_MAX = 120
+
+export function whyOf(args) {
+  const raw = args?.flags?.why
+  if (raw === undefined) return undefined
+  if (raw === true) throw new CliError(t('whyUsage'), EXIT.FAIL)
+  const text = String(raw).trim()
+  if (!text) return undefined
+  return text.length > WHY_MAX ? text.slice(0, WHY_MAX) : text
+}
+
+function withWhy(params, args) {
+  const why = whyOf(args)
+  return why ? { ...params, why } : params
+}
 
 // ---------- 子命令 ----------
 
@@ -322,9 +398,9 @@ export async function cmdMacs(args) {
 }
 
 export async function cmdInfo(args) {
-  const { client, session, pairing } = await connect({ mac: args.flags.mac })
+  const { client, session, pairing, info: probed } = await connect({ mac: args.flags.mac })
   try {
-    const info = await session.request('sys.info', {}, { timeoutMs: 30_000 })
+    const info = probed || (await session.request('sys.info', {}, { timeoutMs: 30_000 }))
     if (args.flags.json) {
       say(JSON.stringify(info))
       return EXIT.OK
@@ -370,7 +446,7 @@ export async function cmdRun(args) {
   try {
     const res = await session.request(
       'run',
-      { cmd, cwd: args.flags.cwd, timeout, shell: args.flags.shell },
+      withWhy({ cmd, cwd: args.flags.cwd, timeout, shell: args.flags.shell }, args),
       {
         timeoutMs: timeout * 1000 + 130_000,
         onStream: (s) => {
@@ -410,7 +486,7 @@ export async function cmdPut(args) {
       const slice = data.subarray(off, Math.min(off + CHUNK, data.length))
       const r = await session.request(
         'fs.put',
-        { path: target, data: slice.toString('base64'), append: off > 0, mode: args.flags.mode },
+        withWhy({ path: target, data: slice.toString('base64'), append: off > 0, mode: args.flags.mode }, args),
         { timeoutMs: 180_000 }
       )
       sent += r?.bytes ?? slice.length
@@ -466,7 +542,7 @@ export async function cmdGet(args) {
     for (;;) {
       const r = await session.request(
         'fs.get',
-        { path: remote, offset, length: GET_CHUNK },
+        withWhy({ path: remote, offset, length: GET_CHUNK }, args),
         { timeoutMs: 600_000, onStream: (s) => s.data && streamed.push(Buffer.from(s.data, 'base64')) }
       )
       if (r.archive === true) {
@@ -544,11 +620,14 @@ export async function cmdShot(args) {
     const parts = []
     const r = await session.request(
       'screen.shot',
-      {
-        display: Number(args.flags.display) || 0,
-        scale: args.flags.scale ? Number(args.flags.scale) : 0.5,
-        format: args.flags.format || 'png',
-      },
+      withWhy(
+        {
+          display: Number(args.flags.display) || 0,
+          scale: args.flags.scale ? Number(args.flags.scale) : 0.5,
+          format: args.flags.format || 'png',
+        },
+        args
+      ),
       { timeoutMs: 180_000, onStream: (s) => s.data && parts.push(Buffer.from(s.data, 'base64')) }
     )
     const png = Buffer.concat(parts)
@@ -566,7 +645,7 @@ export async function cmdOpen(args) {
   if (!target) throw new CliError('用法:machands open <网址或路径>', EXIT.FAIL)
   const { client, session } = await connect({ mac: args.flags.mac })
   try {
-    await session.request('open', { target }, { timeoutMs: 130_000 })
+    await session.request('open', withWhy({ target }, args), { timeoutMs: 130_000 })
     say(`已在 Mac 上打开 ${target}`)
     return EXIT.OK
   } finally {
@@ -581,7 +660,7 @@ export async function cmdClip(args) {
     if (sub === 'set') {
       const text = args._.slice(1).join(' ')
       if (!text) throw new CliError('用法:machands clip set <文本>', EXIT.FAIL)
-      await session.request('clip.set', { text }, { timeoutMs: 130_000 })
+      await session.request('clip.set', withWhy({ text }, args), { timeoutMs: 130_000 })
       say(t('clipSet'))
       return EXIT.OK
     }
@@ -648,14 +727,59 @@ export async function cmdDoctor(args) {
       `Mac       ${m.macName}  中继 ${m.relay.host}:${m.relay.port} ${relayOk ? '可达' : '不可达'}  ${online ? t('online') : t('offlineWord')}${why && !online ? '  · ' + why : ''}`
     )
   }
+  // App 那一层的体检(0.3 起):装了几份、是不是从 DMG 直接跑的、签名、权限、会不会自己更新。
+  // 同一个 bundle id 装了多份,它们会抢同一个中继身份 —— 这就是"时灵时不灵"的真凶。
+  let app = null
+  let appError = null
+  if (macs.length && results.some((r) => r.online)) {
+    try {
+      const { client, session } = await connect({ mac: args.flags.mac, quiet: true })
+      try {
+        app = await session.request('app.doctor', {}, { timeoutMs: 60_000 })
+      } finally {
+        client.close()
+      }
+    } catch (err) {
+      appError = unknownMethodOf(err) ? 'too-old' : humanError(err)
+    }
+  }
+  const listed = (Array.isArray(app?.duplicates) ? app.duplicates : []).filter(Boolean)
+  // App 可能把自己也列进去,也可能只列"另外那几份";两种都认
+  const copies = app?.path && !listed.includes(app.path) ? [app.path, ...listed] : listed
+  const extra = copies.filter((c) => c !== app?.path)
+  const messy = extra.length > 0 || app?.translocated === true
+  const allOnline = Boolean(macs.length) && results.every((r) => r.online)
+  const code = !allOnline ? EXIT.OFFLINE : messy ? EXIT.FAIL : EXIT.OK
+
   if (args.flags.json) {
-    say(JSON.stringify({ home: homeDir(), id: identity.id, name: identity.name, macs: results }))
-    return macs.length && results.every((r) => r.online) ? EXIT.OK : EXIT.OFFLINE
+    say(JSON.stringify({ home: homeDir(), id: identity.id, name: identity.name, macs: results, app, appError }))
+    return code
   }
   say(t('doctorHead'))
   lines.forEach((l) => say('  ' + l))
-  if (macs.length && results.every((r) => r.online)) say('  一切正常。')
-  return macs.length && results.every((r) => r.online) ? EXIT.OK : EXIT.OFFLINE
+  if (app) {
+    say('  ' + t('doctorApp', app.version ?? '?', app.path ?? '?'))
+    if (app.signed_by !== undefined || app.notarized !== undefined) {
+      const nota = app.notarized === true ? 'yes' : app.notarized === false ? 'no' : t('unknown')
+      say('  ' + t('doctorSign', app.signed_by ?? t('unknown'), nota))
+    }
+    if (app.auto_update !== undefined) say('  ' + t('doctorAutoUpdate', app.auto_update ? 'on' : 'off'))
+    if (app.perms) {
+      say('  ' + t('doctorPermsLine', permWord(app.perms.screen), permWord(app.perms.accessibility), permWord(app.perms.notifications)))
+    }
+    if (app.translocated === true) say('  ' + t('doctorTranslocated'))
+    if (extra.length) {
+      say('  ' + t('doctorDup', copies.length))
+      copies.forEach((c) => say('      ' + c))
+      say('    ' + t('doctorDupFix'))
+    }
+  } else if (appError === 'too-old') {
+    say('  ' + t('doctorAppUnknown'))
+  } else if (appError) {
+    say('  App       ' + appError)
+  }
+  if (allOnline && !messy) say('  一切正常。')
+  return code
 }
 
 // ---------- v0.2:一次授权 / 体检 / 作业 / 会话 / 键鼠 / 录屏 / MCP 桥(SPEC §11–§13) ----------
@@ -857,7 +981,7 @@ export async function cmdJob(args) {
         const p = { cmd }
         if (args.flags.cwd) p.cwd = args.flags.cwd
         if (args.flags.timeout !== undefined) p.timeout = num(args.flags.timeout, 3600)
-        const r = await session.request('job.submit', p, { timeoutMs: 60_000 })
+        const r = await session.request('job.submit', withWhy(p, args), { timeoutMs: 60_000 })
         if (args.flags.json) say(JSON.stringify(r))
         else say(r.jobId)
         return EXIT.OK
@@ -946,7 +1070,7 @@ export async function cmdSession(args) {
         const p = {}
         if (cmd) p.cmd = cmd
         if (args.flags.cwd) p.cwd = args.flags.cwd
-        const r = await session.request('session.open', p, { timeoutMs: 60_000 })
+        const r = await session.request('session.open', withWhy(p, args), { timeoutMs: 60_000 })
         if (args.flags.json) say(JSON.stringify(r))
         else say(r.sessionId)
         return EXIT.OK
@@ -955,7 +1079,7 @@ export async function cmdSession(args) {
         let text = joinWords(args, 1)
         if (!text) throw usage()
         if (!args.flags.raw) text = unescapeText(text)
-        await session.request('session.write', { sessionId: id, data: text }, { timeoutMs: 30_000 })
+        await session.request('session.write', withWhy({ sessionId: id, data: text }, args), { timeoutMs: 30_000 })
         if (args.flags.json) say(JSON.stringify({ sessionId: id, bytes: Buffer.byteLength(text) }))
         return EXIT.OK
       }
@@ -1035,7 +1159,7 @@ export async function cmdInput(args) {
   const [method, params] = op()
   const { client, session } = await connect({ mac: args.flags.mac })
   try {
-    const r = (await session.request(method, params, { timeoutMs: 60_000 })) || {}
+    const r = (await session.request(method, withWhy(params, args), { timeoutMs: 60_000 })) || {}
     if (args.flags.json) say(JSON.stringify(r))
     else if (method === 'input.where') say(`${Math.round(r.x ?? 0)} ${Math.round(r.y ?? 0)}`)
     return EXIT.OK
@@ -1053,7 +1177,7 @@ export async function cmdRecord(args) {
   const display = Math.max(0, Math.round(num(args.flags.display, 0)))
   const { client, session } = await connect({ mac: args.flags.mac })
   try {
-    const { r, buf } = await pullBinary(session, 'screen.record', { seconds, display }, seconds * 1000 + 130_000)
+    const { r, buf } = await pullBinary(session, 'screen.record', withWhy({ seconds, display }, args), seconds * 1000 + 130_000)
     writeFileSync(out, buf)
     if (args.flags.json) say(JSON.stringify({ path: out, bytes: buf.length, seconds: r.seconds ?? seconds, format: r.format ?? 'mov' }))
     else say(t('recordSaved', out, r.seconds ?? seconds, buf.length))
@@ -1071,7 +1195,7 @@ export async function cmdWindowShot(args) {
   if (args.flags.quality !== undefined) p.quality = Math.round(num(args.flags.quality, 80))
   const { client, session } = await connect({ mac: args.flags.mac })
   try {
-    const { r, buf } = await pullBinary(session, 'screen.window', p, 180_000)
+    const { r, buf } = await pullBinary(session, 'screen.window', withWhy(p, args), 180_000)
     writeFileSync(out, buf)
     if (args.flags.json) say(JSON.stringify({ path: out, width: r.width, height: r.height, bytes: buf.length }))
     else say(t('shotSaved', out, r.width ?? '?', r.height ?? '?'))
@@ -1141,7 +1265,10 @@ export async function cmdMcpBridge(args) {
         const raw = [...args._.slice(2), ...args.rest].join(' ').trim() || '{}'
         const callArgs = parseJsonArg(raw, 'object')
         const timeout = Math.min(600, Math.max(5, num(args.flags.timeout, 120)))
-        const r = (await session.request('mcp.call', { sessionId: sid, tool, args: callArgs, timeout }, { timeoutMs: timeout * 1000 + 130_000 })) || {}
+        const r =
+          (await session.request('mcp.call', withWhy({ sessionId: sid, tool, args: callArgs, timeout }, args), {
+            timeoutMs: timeout * 1000 + 130_000,
+          })) || {}
         if (args.flags.json) say(JSON.stringify(r))
         else {
           for (const c of Array.isArray(r.content) ? r.content : []) {
@@ -1202,6 +1329,111 @@ export async function cmdRelaunch(args) {
   }
 }
 
+// ---- update:让 App 自己升级,而不是重下一份装到别的地方(那会把系统权限弄丢) ----
+
+/** App 重启期间会断线;每 2 秒试着连回去,拿到 app_version 就算回来了。 */
+async function waitForApp(mac, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  await sleep(1500)
+  while (Date.now() < deadline) {
+    try {
+      const { client, session } = await connect({ mac, waitMs: 2000, quiet: true })
+      try {
+        const info = await session.request('sys.info', {}, { timeoutMs: 15_000 })
+        if (info?.app_version) return info.app_version
+      } finally {
+        client.close()
+      }
+    } catch {
+      /* 还没回来,再等 */
+    }
+    await sleep(2000)
+  }
+  return null
+}
+
+export async function cmdUpdate(args) {
+  const check = Boolean(args.flags.check)
+  let r
+  {
+    const { client, session } = await connect({ mac: args.flags.mac })
+    try {
+      r = (await session.request('app.update', { check }, { timeoutMs: 300_000 })) || {}
+    } catch (err) {
+      if (unknownMethodOf(err)) throw new CliError(t('updateUnsupported'), EXIT.FAIL)
+      throw err
+    } finally {
+      client.close()
+    }
+  }
+  const current = r.current ?? appVersion() ?? '?'
+  const latest = r.latest
+  if (r.status === 'failed') {
+    if (args.flags.json) say(JSON.stringify(r))
+    warn(t('updateFailed', r.reason || t('unknown')))
+    return EXIT.FAIL
+  }
+  if (check) {
+    if (args.flags.json) say(JSON.stringify(r))
+    else if (latest && cmpVersion(latest, current) > 0) say(t('updateAvailable', current, latest))
+    else say(t('updateUpToDate', current))
+    return EXIT.OK
+  }
+  if (r.status !== 'updating') {
+    if (args.flags.json) say(JSON.stringify(r))
+    else say(t('updateUpToDate', current))
+    return EXIT.OK
+  }
+  if (!args.flags.json) say(t('updateStarting', current, latest ?? '?'))
+  const back = await waitForApp(args.flags.mac, 90_000)
+  if (!back) {
+    if (args.flags.json) say(JSON.stringify({ ...r, back: false }))
+    warn(t('updateTimeout'))
+    return EXIT.FAIL
+  }
+  if (args.flags.json) say(JSON.stringify({ ...r, back: true, version: back }))
+  else say(t('updateBack', back))
+  return EXIT.OK
+}
+
+/** 截 MacHands 自己的窗口:走 App 内部渲染,不需要屏幕录制授权。 */
+export async function cmdSelfshot(args) {
+  const out = args.flags.o || args.flags.out || 'machands-ui.png'
+  const p = {
+    window: typeof args.flags.window === 'string' ? args.flags.window : 'main',
+    format: args.flags.format || 'png',
+    scale: args.flags.scale ? num(args.flags.scale) : 1,
+  }
+  const { client, session } = await connect({ mac: args.flags.mac })
+  try {
+    const { r, buf } = await pullBinary(session, 'screen.selfshot', p, 120_000)
+    writeFileSync(out, buf)
+    if (args.flags.json) {
+      say(JSON.stringify({ path: out, width: r.width, height: r.height, bytes: buf.length, windows: r.windows }))
+    } else {
+      say(t('selfshotSaved', out, r.width ?? '?', r.height ?? '?'))
+      for (const w of Array.isArray(r.windows) ? r.windows : []) {
+        warn(`  ${w.title ?? '?'}  ${w.w ?? '?'}×${w.h ?? '?'}  ${w.bytes ?? '?'} 字节`)
+      }
+    }
+    return EXIT.OK
+  } finally {
+    client.close()
+  }
+}
+
+export async function cmdShow(args) {
+  const { client, session } = await connect({ mac: args.flags.mac })
+  try {
+    await session.request('app.showWindow', {}, { timeoutMs: 30_000 })
+    if (args.flags.json) say(JSON.stringify({ shown: true }))
+    else say(t('showDone'))
+    return EXIT.OK
+  } finally {
+    client.close()
+  }
+}
+
 const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
 
   连接
@@ -1214,7 +1446,9 @@ const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
   machands which [工具...]                    工具的路径(godot blender xcodebuild node …)
   machands check -- <命令>                    问一句这条命令会 allow / ask / deny,不执行
   machands policy                            Mac 当前的审批模式与黑白名单
-  machands doctor                            自检:中继可达、身份文件、Mac 在线
+  machands update [--check]                  让 Mac 上的 App 自己升级(--check 只看不装);升级不会弄丢系统权限
+  machands doctor                            自检:中继可达、身份文件、Mac 在线、App 版本/签名/权限/是否装了多份
+  machands show                              打开并激活 Mac 上 MacHands 的主窗口
   machands forget <mac>                      本地删除配对
 
   执行
@@ -1236,6 +1470,7 @@ const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
 
   看与动
   machands shot [-o out.png] [--scale 0.5] [--display 0]
+  machands selfshot [--window main|approval|all] [-o out.png]   截 MacHands 自己的界面,不需要屏幕录制权限
   machands window-shot [--app 名] [--title 标题] [-o out.png] [--scale 1]
   machands record [--seconds 5] [--display 0] -o out.mov
   machands input where | move X Y | click X Y [--right] [--double] | drag X1 Y1 X2 Y2 [--ms 300]
@@ -1251,6 +1486,10 @@ const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
   machands mcp list <sid> | call <sid> <工具> ['{…}'] | close <sid>
 
   公共参数:--mac <名字>  --json  --help  --version
+  --why "<一句人话>"   会弹审批卡的命令(run/put/get/shot/input/job submit/session/open/clip set/mcp call)都接;
+                      Mac 上的人看到的是这句话,不是命令本身。
+                        好:--why "确认雪场地形改完之后的样子"
+                        坏:--why "运行 screencapture"
   退出码:0 成功;run/job result 原样返回命令退出码(超时 124);拒绝 77,超时 78,离线 69,未配对 66。`
 
 export async function main(argv = process.argv.slice(2)) {
@@ -1292,6 +1531,10 @@ export async function main(argv = process.argv.slice(2)) {
     'window-shot': cmdWindowShot,
     power: cmdPower,
     relaunch: cmdRelaunch,
+    // v0.3
+    update: cmdUpdate,
+    selfshot: cmdSelfshot,
+    show: cmdShow,
   }
   if (cmd === 'mcp') {
     // 不带子命令 = 自己当 MCP 服务器;带子命令 = 去调 Mac 上的 MCP 服务器

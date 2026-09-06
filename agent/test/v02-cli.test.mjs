@@ -19,17 +19,18 @@ test('CLI v0.2:use / verify / perms / which / check', async (t) => {
   const verify = await cli(['verify'], env)
   assert.equal(verify.code, 0, verify.out + verify.err)
   const lines = verify.out.split('\n').filter((l) => /^[✓✗] /.test(l))
-  assert.equal(lines.length, 7, verify.out)
+  // 0.3 起多了 update 那一行(App 会不会自己升级也是"能不能干活"的一部分)
+  assert.equal(lines.length, 8, verify.out)
   assert.deepEqual(
     lines.map((l) => l.split(/\s+/)[1]),
-    ['run', 'fs', 'screen', 'input', 'notify', 'job', 'mcp']
+    ['run', 'fs', 'screen', 'input', 'notify', 'job', 'mcp', 'update']
   )
   for (const l of lines) assert.match(l, /^✓ \S+  \S/, l)
 
   const vj = await cli(['verify', '--json'], env)
   assert.equal(vj.code, 0, vj.err)
   const rows = jsonList(JSON.parse(vj.out), 'rows')
-  assert.equal(rows.length, 7)
+  assert.equal(rows.length, 8)
   assert.ok(rows.every((r) => r.ok === true && typeof r.name === 'string'))
 
   const perms = await cli(['perms'], env)

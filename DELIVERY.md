@@ -171,3 +171,69 @@ cd ~/machands/macapp
 - 界面截图与"真点击"交互测试要等屏幕录制 + 辅助功能勾上之后补;`--no-relay` 调试副本自己也截不了自己(候选:把自家窗口渲染成 PNG 的调试开关,注:画不出系统材质)。
 - Air 尚未升级到 0.2.0:等 mini 的交互验证过了再推(同一份 .app 拷过去即可)。
 - `perms` / `which` 恒 exit 0(信息类命令);`session read` 会把 zsh 提示符一起读回来。
+
+---
+
+# 0.3.0 发布准备(2026-09-06):从"重新下载"改成"App 自己更新"
+
+用户原话:「app应该内置自动更新 而不是 重新下载这种更新方式导致的权限混乱
+其他agent用machands的时候就一直申请权限 还不知道什么问题了」。
+
+## 根因(已取证,不是猜的)
+
+在 mini 上查到两件事,合起来就是"权限一直要重新申请"的全部原因:
+
+1. **签名方式不对。** 0.1.0 与 0.2.0 都是 `Apple Development` 证书签的,`spctl -a -vv` = **rejected**。
+   macOS 的 TCC 按代码签名的**指定要求**认 App;开发证书的指定要求写死在那张证书的名字上,
+   一换二进制/一换证书就对不上,屏幕录制与辅助功能全部作废。实测:
+   ```
+   designated => identifier "app.machands.MacHands" and anchor apple generic
+                 and certificate leaf[subject.CN] = "Apple Development: wang tianxin (4CBL3R2MCH)" …
+   ```
+   Developer ID 的指定要求锚在 `subject.OU`(team id `3PW7WV39F5`),跨版本不变。
+
+2. **更新方式不对。** "下载新包 → 拖进 /Applications"每次都产生一次身份变更,
+   而且当天 mini 上一度同时存在 **5 份**同 bundle id 的拷贝(`/Applications`、`~/Applications`、
+   ThunderSSD 上的开发副本…),其中一份 **0.1.0 抢走了中继身份** —— 别的 agent 因此收到
+   `unknown method`,用户在权限面板里看到同名条目,以为"勾了没用"。
+
+## 这一轮做了什么(发布管线部分)
+
+| 文件 | 作用 |
+|---|---|
+| `macapp/scripts/release.sh`(重写) | 一条命令:预检 → Developer ID 签名 + 强化运行时 → zip → 公证 → 钉票据 → 重打 zip → `spctl` 必须 accepted → 生成 appcast |
+| `macapp/scripts/make-appcast.sh`(新) | sha256 + Ed25519 签名 → `appcast.json`;签完自验,不过就不出文件 |
+| `macapp/scripts/keygen-release.sh`(新) | 一次性生成发布密钥,私钥 600 存 `~/.machands/`,只打印公钥 |
+| `macapp/scripts/build-app.sh` | 加 `--hardened-runtime`;签完打印**指定要求**,让"会不会掉权限"当场看得见 |
+| `site/download.html`(新) | 官网下载页,中英双语,零外部依赖,自己读 `appcast.json` 显示最新版 |
+| `site/appcast.json`(新) | 样例(用测试密钥生成,发布时被真的覆盖) |
+| `docs/RELEASE.md`(新) | 发布手册,含"只有你能做"的三步 |
+| `SPEC.md` §15 | appcast 字段表、校验链、原地替换规则、版本协商、v0.3 验收 |
+
+**硬约束(写进脚本)**:正式包的 bundle id 只能是 `app.machands.MacHands`;
+`release.sh` 对 Info.plist 与签名两处硬断言,不等就退出 8,且不接受 `--bundle-id` 透传。
+开发副本用 `app.machands.MacHands.dev`。
+
+## 你要做的事(只有你能做,约 15 分钟)
+
+1. **申请 Developer ID Application 证书**。现有三张(Apple Development / Apple Distribution /
+   3rd Party Mac Developer)都不行 —— 后两张是上架 App Store 用的。
+   步骤见 `docs/RELEASE.md` §2.1(钥匙串访问生成 CSR → developer.apple.com 换 `.cer` → 双击装上)。
+2. **存一次公证凭据**:
+   ```bash
+   xcrun notarytool store-credentials machands-notary \
+     --apple-id 你的AppleID --team-id 3PW7WV39F5 --password <App专用密码>
+   ```
+3. **生成发布密钥**:`cd macapp && ./scripts/keygen-release.sh`,把打印的公钥交给我填进 `Updater.swift`。
+4. `cd agent && npm publish`(需要你的 OTP)。
+
+做完 1–3,以后每次发版就是一条 `release.sh`,用户端零操作、零重新授权。
+
+## 诚实残差(发布管线部分)
+
+- 整条流水线**没有在 Mac 上跑过** —— 缺 Developer ID 证书,跑不到第 2 步。
+  在 Linux 上验证过的只有:四个脚本 `bash -n` 通过、`keygen-release.sh` 与 `make-appcast.sh`
+  全流程实跑(签名自验通过、JSON 合法)、`release.sh` 的参数校验与拒绝路径。
+- "升级后权限不丢"是**按 TCC 的机制推断**的,要等第一次 Developer ID 发版后实测确认(SPEC §15.7 第 4 条)。
+- macOS 15 起苹果会**定期**提醒确认屏幕录制,那是苹果的策略,和我们的更新无关,别误判成回归。
+- 官网还没绑域名(nginx `server_name _`),`--host` 暂时要传 IP;`/var/www/machands/downloads/` 目录还没建。
