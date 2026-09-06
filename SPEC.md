@@ -258,3 +258,177 @@ machands/
 3. Mac 上:`swift build` 通过;`swift test` 用 `shared/PROTOCOL-VECTORS.json` 验证加解密与 Node 互通。
 4. 真机:App 首启 → 复制 → 在服务器 `npx machands pair` → 菜单栏"已连接" → `machands run -- sw_vers` 弹卡 → 允许 → 输出回到服务器;`machands shot` 得到真 PNG;`machands put/get` 往返一致;暂停后命令得 `DENIED`。
 5. `claude mcp add machands -- npx -y machands mcp` 后,Claude Code 能调用 `mac_run`。
+
+---
+
+# v0.2 修订(2026-09-06)· 一次授权 + 开发者便利标准
+
+> 所有者指令(原话):"授权这个是最麻烦的我希望授权一次即可 不然太麻烦 而且需要引导。
+> 授权后需要进行验证 没问题就好。就是开发方便的标准你来定义后 完善整个app 和 npm依赖等。"
+>
+> 本节是 v1 契约之上的**增量**,与 v1 冲突处以本节为准。三个部件仍是 App / Agent CLI / Relay;
+> **Relay 协议不变**(全部新能力都在端到端层 §5 的 RPC 里),0.1 的 relay 继续可用。
+
+## 10. 一次授权(取代"逐条弹卡"作为默认体验)
+
+### 10.1 授权范围(`ApprovalMode` 增加 `readonly`)
+
+| 范围 | 语义 | 卡片 |
+|---|---|---|
+| `auto`(开发者,**推荐**) | 全部方法放行;内置黑名单命中直接回 `POLICY`,**不弹卡** | 永不弹 |
+| `readonly`(只读) | 只放行读方法(§10.4);写方法回 `DENIED reason=readonly`,不弹卡 | 永不弹 |
+| `ask`(逐条审批,v1 行为) | 写方法弹卡,读方法按"读取也要问"决定 | 会弹 |
+
+用户在**配对完成的那一刻**选一次;之后除了黑名单命中,再不打扰。`policy.get` 的 `mode` 原样返回三者之一。
+
+### 10.2 授权流程(App 主窗口,配对成功后自动切到这一页)
+
+```
+✓ <agent 名> 已连接
+授权范围(只需选一次)
+  (•) 开发者 — 全部允许;危险命令仍被黑名单拦下        推荐
+  ( ) 只读   — 只能看,不能改
+  ( ) 逐条审批 — 每条命令都问我
+需要的系统权限                                  状态      
+  通知           agent 提醒你时用                 ✓ 已授权
+  屏幕录制       截屏 / 录屏                      ✗ 未授权  [打开设置]
+  辅助功能       键盘鼠标(手感测试、点按钮)        ✗ 未授权  [打开设置]
+[ 授权并验证 ]
+验证结果  执行命令 ✓  读写文件 ✓  截屏 ✓  键鼠 ✓  通知 ✓  作业 ✓
+```
+
+- 「授权并验证」= 写入范围 → 依次触发系统权限请求(`CGRequestScreenCaptureAccess`、
+  `AXIsProcessTrustedWithOptions(prompt)`、`UNUserNotificationCenter.requestAuthorization`)
+  → 跑本机自检(§10.3)→ 逐行显示 ✓/✗ 与修复指引。
+- 权限状态每 1 秒轮询一次,用户在系统设置里勾上后**不用回来点任何东西**,行自动变绿。
+- 「打开设置」直达对应面板:`x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture`
+  / `?Privacy_Accessibility` / `?Notifications`。
+- 授权完成写 `settings.authorizedAt`,菜单栏第二行显示"已授权 · 开发者"。
+- 此页面**随时可从菜单「授权与验证…」再打开**,重跑自检。
+
+### 10.3 自检(两端同一张表)
+
+| 行 | 怎么验 | 失败时的指引 |
+|---|---|---|
+| 执行命令 | `run` `printf machands-ok` 回显一致、退出码 0 | 看审计日志 |
+| 读写文件 | `fs.put` 临时文件 → `fs.get` 字节一致 → 删除 | 磁盘/权限 |
+| 截屏 | `screen.shot scale=0.1` 得到非空 PNG | 屏幕录制未授权 → 打开设置 |
+| 键鼠 | `input.where` 取当前光标 → `input.move` 到同一位置(无可见效果) | 辅助功能未授权 → 打开设置 |
+| 通知 | `notify` 一条"MacHands 验证通过" | 通知被关 → 打开设置 |
+| 作业 | `job.submit sleep 1; echo done` → `job.result` 为 0 | 见审计日志 |
+| MCP 桥 | `mcp.servers` 能列出配置(0 个也算过);有则 `mcp.list` 第一个 | 配置文件格式 |
+
+App 端:`Verifier`(本机直接调 Executor 同一套实现)。Agent 端:`machands verify` 走 RPC 跑同一张表。
+新增 RPC `verify.run` 让 agent 拿到 App 自检的原始结果。
+
+### 10.4 方法分类(策略用)
+
+- 读:`fs.get` `fs.ls` `screen.shot` `screen.list` `screen.window` `screen.record` `sys.info` `sys.perms`
+  `sys.which` `clip.get` `job.status` `job.tail` `job.result` `job.list` `session.read` `mcp.servers` `mcp.list`
+- 写:`run` `fs.put` `open` `clip.set` `input.*` `job.submit` `job.kill` `session.open` `session.write`
+  `session.close` `mcp.open` `mcp.call` `mcp.close` `power.assert` `power.release` `app.relaunch` `verify.run`
+- 永不审批:`notify` `policy.get` `policy.check`
+
+### 10.5 内置黑名单(v1 四条 → 以下;auto 模式同样拦,命中回 `POLICY` 不弹卡)
+
+```
+rm -rf /        rm -rf ~        rm -rf /*       diskutil erase      diskutil eraseDisk
+mkfs            dd if=          sudo            csrutil             launchctl bootout system
+security delete-keychain        tccutil reset   killall MacHands    pkill -f MacHands
+osascript -e 'tell application "System Events" to keystroke        ← 键鼠走 input.*,不走 osascript
+```
+
+## 11. 新增 RPC(§5.1 的增量)
+
+| m | p | 返回 | 说明 |
+|---|---|---|---|
+| `sys.info` | — | v1 字段 + `mem_gb, disk_free_gb, cpu, gpu, displays:[{id,w,h,main}], tools:{godot,blender,xcodebuild,swift,node,python3,brew,cliclick,ffmpeg,git}` | tools 值是路径或 null。**开工体检一次拿全** |
+| `sys.perms` | — | `{screen:bool, accessibility:bool, notifications:"authorized"\|"denied"\|"notDetermined"\|"unknown", automation:"onDemand"}` | |
+| `sys.which` | `{names:[…]}` | `{name: path\|null}` | 走 `zsh -lc command -v` |
+| `policy.check` | `{method, subject}` | `{decision:"allow"\|"ask"\|"deny", reason?}` | 干跑,不执行、不记审计 |
+| `fs.get` | 同 v1;`path` 为目录时 | 流 `{data}` + `{archive:true, bytes, entries}` | 目录自动 `tar czf`,agent 端解包 |
+| `screen.window` | `{app?, title?, scale?, format?}` | 同 `screen.shot` | 前台窗口或按 App 名匹配的窗口;`screencapture -l <id>` |
+| `screen.record` | `{seconds(≤120), display?, fps?}` | 流 `{data}` 分块 + `{bytes, path, seconds}` | `screencapture -v -V <s>`;需要屏幕录制权限 |
+| `input.where` | — | `{x,y}`(顶左原点,与截图同坐标) | 需辅助功能 |
+| `input.move` | `{x,y}` | `{}` | |
+| `input.click` | `{x,y, button?:"left"\|"right", count?:1}` | `{}` | |
+| `input.drag` | `{x1,y1,x2,y2, ms?:300}` | `{}` | 插值 20 步 |
+| `input.scroll` | `{x,y,dx,dy}` | `{}` | |
+| `input.key` | `{key, mods?:["cmd","shift","alt","ctrl"]}` | `{}` | key 为单字符或 `enter tab esc space up down left right f1..f12 delete` |
+| `input.type` | `{text}` | `{}` | Unicode 直接注入,不依赖键盘布局 |
+| `job.submit` | `{cmd, cwd?, env?, timeout?:秒(默认 3600)}` | `{jobId}` | 立刻返回;输出落 `~/Library/Application Support/MacHands/jobs/<id>/` |
+| `job.status` | `{jobId}` | `{state:"running"\|"exited"\|"killed"\|"orphaned", code?, ms, outBytes, errBytes, cmd, startedAt}` | App 重启后原进程失联记 `orphaned`,文件仍在 |
+| `job.tail` | `{jobId, stream:"out"\|"err", offset?}` | `{data:base64, offset, eof}` | ≤512 KiB/次 |
+| `job.result` | `{jobId, wait?:秒}` | 同 status;`wait` 内结束就早返 | |
+| `job.kill` | `{jobId}` | `{}` | 杀整棵进程树(见 §11.1) |
+| `job.list` | — | `{jobs:[status…]}` | |
+| `session.open` | `{cmd?, cwd?, env?}` | `{sessionId}` | 有 stdin 的长命进程;默认 `zsh -l` |
+| `session.write` | `{sessionId, data}` | `{}` | 文本写 stdin |
+| `session.read` | `{sessionId, offset?}` | `{data, offset, eof, alive}` | 轮询读合并后的输出 |
+| `session.close` | `{sessionId}` | `{}` | |
+| `mcp.servers` | — | `{servers:[{name, source, command?, args?, url?}]}` | 读 `~/.claude.json` `~/.codex/config.toml` `~/.cursor/mcp.json` `~/Library/Application Support/Claude/claude_desktop_config.json`;**不返回 env 值** |
+| `mcp.open` | `{name}` 或 `{command,args?,env?}` | `{sessionId, tools:[…]}` | 起 stdio MCP 服务并完成 initialize;工具表随手返回 |
+| `mcp.list` | `{sessionId}` | `{tools}` | |
+| `mcp.call` | `{sessionId, tool, args, timeout?}` | MCP 的 `result` 原样 | |
+| `mcp.close` | `{sessionId}` | `{}` | |
+| `power.assert` | `{seconds(≤14400)}` | `{until}` | `caffeinate -dims -t` |
+| `power.release` | — | `{}` | |
+| `app.relaunch` | — | `{}` | `open -n` 新实例后退出(DELIVERY v1.1 项) |
+| `verify.run` | — | `{rows:[{name, ok, detail, fix?}]}` | §10.3 那张表 |
+
+### 11.1 超时与进程树
+`run` / `job.*` / `session.*` 的超时和 kill 都对**整棵进程树**生效:先 SIGTERM 全部后代,2 秒后 SIGKILL 残留。
+不再出现"杀了 zsh,Godot 还在吃 GPU"。
+
+## 12. Agent CLI 增量(§6)
+
+```
+machands use <mac> [--default]          设默认 Mac;只有一台在线时自动用它
+machands verify [--mac]                 授权后验证(§10.3 那张表,✓/✗ + 修复指引);全过退出 0
+machands perms  [--mac]                 系统权限状态 + 修复指引
+machands check  [--mac]                 开工体检:sys.info 扩展字段,一屏看完
+machands job submit|status|tail|result|kill|list …
+machands session open|write|read|close …
+machands input where|move|click|drag|scroll|key|type …
+machands record <秒> [-o out.mov]
+machands window-shot [--app 名] [-o out.png]
+machands mcp servers | tools <server> | call <server> <tool> [json]
+machands policy check -- <命令>
+machands power assert <秒> | release
+machands get <远端目录> <本地目录>          目录自动打包/解包
+```
+退出码新增:`readonly` 拒绝 = 77(同 DENIED)。
+
+### 12.1 MCP 服务器增量(§6.1)
+新增工具:`mac_verify` `mac_perms` `mac_check` `mac_job_submit` `mac_job_status` `mac_job_tail` `mac_job_result`
+`mac_job_kill` `mac_input_where` `mac_input_click` `mac_input_drag` `mac_input_key` `mac_input_type` `mac_record`
+`mac_window_shot` `mac_mcp_servers` `mac_mcp_tools` `mac_mcp_call` `mac_power_assert` `mac_policy_check`。
+`mac_get` 改为**循环分块到 eof**,目录返回解包后的文件清单;绝不静默截断。
+
+## 13. 开发者便利标准 v1(我定义的"方便";每条都有验证)
+
+| # | 标准 | 验证 |
+|---|---|---|
+| 1 | **一次授权**:配对后选一次范围,之后零弹卡(黑名单直接拒) | `machands verify` 连续 20 条命令,审计日志里 `decision` 无 `once/hour/always/timeout` |
+| 2 | **引导式权限**:授权页一次性列出全部需要的系统权限,每项有状态灯与直达按钮,勾上后自动变绿 | 在未授权的 Mac 上走一遍,不需要看文档 |
+| 3 | **授权后自检**:App 与 CLI 同一张表,✓/✗ + 修复指引 | `machands verify` 与 App 页面结果一致 |
+| 4 | **默认 Mac**:多台时 `use` 一次;只有一台在线时不用指定 | `machands info` 不带 `--mac` 不报错 |
+| 5 | **长活不阻塞**:`job.*` 提交即返回,断线不丢,超时杀干净 | 提交 `sleep 30`,断开 CLI,30 秒后 `job.result` 拿到 0;`job.kill` 后 `pgrep` 无残留 |
+| 6 | **交互与桥接**:`session.*` 有 stdin;`mcp.*` 能透传 Mac 上任一 stdio MCP 服务 | `mcp.open claudex-computer-use` → `mcp.list` 非空 |
+| 7 | **看得见动得了**:窗口截图、录屏、键鼠 | `record 3` 得到可播放的 .mov;`input.key c` 在游戏里切了视角 |
+| 8 | **开工体检**:一条命令知道内存/GPU/磁盘/装了什么 | `machands check` 输出含 `godot`/`blender` 路径或 null |
+| 9 | **不静默截断**:大文件、目录、长输出全部完整或明确报错 | 1.3 MB 截图经 MCP `mac_get` 字节一致 |
+| 10 | **可预判**:`policy check` 干跑告诉 agent 会不会被拒 | 对黑名单命令返回 `deny` |
+| 11 | **自救**:`app.relaunch`、`power.assert` | 重启后 30 秒内 `machands macs` 在线 |
+| 12 | **文档即代码**:README/agent README/SPEC 的命令表与 `--help` 逐条一致 | 测试比对 USAGE 与 SPEC 表 |
+
+## 14. 验收(v0.2,缺一不算完成)
+
+1. `node --test relay/test agent/test` 全绿(含新方法的假 Mac 实现与 e2e)。
+2. `swift build` / `swift test` 全绿(策略新增 readonly、黑名单、方法分类都有断言)。
+3. 真机(Mac mini,mode 从 ask 起):配对 → 授权页出现 → 选"开发者"→ 授权并验证 → 全 ✓
+   (屏幕录制/辅助功能各授权一次)。
+4. 从 VPS:`machands verify` 全 ✓;`machands job submit -- sleep 20; echo ok` → 断开 → `job.result` = 0。
+5. `machands mcp servers` 列出 Mac 上已配置的 MCP;`machands mcp tools claudex-computer-use` 非空。
+6. `machands record 3` 拉回 .mov;`machands input key c` 在 Godot 里切视角(人眼确认)。
+7. 全程审计日志无一条 `once/hour/always/timeout`。
