@@ -324,8 +324,8 @@ struct Strings {
         "verify.job": ["zh": "后台作业", "en": "Background job"],
         "verify.mcp": ["zh": "MCP 桥", "en": "MCP bridge"],
         "verify.allPass": ["zh": "全部通过,可以关掉这个窗口了。", "en": "Everything passed. You can close this window."],
-        "verify.someFail": ["zh": "有 %d 项没过,按提示处理后点「重新验证」。",
-                            "en": "%d item(s) failed — follow the hints, then verify again."],
+        "verify.someFail": ["zh": "有 %d 项没过。按 → 后面的提示在 Mac 上处理,处理完这里会自己变。",
+                            "en": "%d item(s) failed. Follow the hints on this Mac — this list updates itself."],
         "verify.notify.body": ["zh": "验证通过:agent 可以在这台 Mac 上干活了。",
                                "en": "Verified: the agent can work on this Mac now."],
         "notify.paired.body.v2": ["zh": "打开 MacHands 窗口选一次授权范围,之后不再打扰。",
@@ -393,7 +393,7 @@ struct Strings {
         "approval.risk.explain.write.clip": ["zh": "会替换你剪贴板里的内容。", "en": "Replaces what is on your clipboard.",
                                              "ja": "クリップボードの内容を置き換えます。", "ko": "클립보드의 내용을 바꿉니다."],
         "approval.risk.explain.delete": ["zh": "会删除文件,删掉就找不回来了。", "en": "Deletes files — gone is gone.",
-                                         "ja": "ファイルを削除します。元に戻せません。", "ko": "파일을 삭제합니다. 되돌릴 수 없습니다."]
+                                         "ja": "ファイルを削除します。元に戻せません。", "ko": "파일을 삭제합니다. 되돌릴 수 없습니다."],
         // --- v0.3 更新与意图 -----------------------------------------------------
         // 这一块整体是 v0.3 新增的,放在文件最后、自成一段,别往上面的区块里插。
 

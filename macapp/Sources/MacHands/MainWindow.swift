@@ -546,10 +546,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if firstRender || previousMode != model.mode {
             selectScope(model.mode)
         }
-        if firstRender && !authCard.isHidden {
-            // 开窗就自检一次,用户不用找按钮
-            DispatchQueue.main.async { [weak self] in self?.authorizePressed() }
-        }
         if let stamp = model.authorizedAt {
             let when = MainWindowController.dateText(milliseconds: stamp)
             authDone.stringValue = Lf("auth.done", "\(StatusItemController.modeName(model.mode)) · \(when)")
@@ -579,7 +575,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             waitingLabel.stringValue = waitingText()
             spinner.startAnimation(nil)
         }
-        if !authCard.isHidden { pollPermissions() }
+        if !authCard.isHidden {
+            pollPermissions()
+            // 开窗就自检一次,用户不用找按钮。必须放在这里:卡片的可见性上面几行才刚定下来,
+            // 放在前面读到的还是初始的"隐藏",自检永远不会跑(真机上就是这么漏掉的)。
+            if firstRender {
+                DispatchQueue.main.async { [weak self] in self?.authorizePressed() }
+            }
+        }
 
         fitWindow()
     }
@@ -682,6 +685,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     private func applyPermissions(_ snapshot: Permissions.Snapshot) {
         guard snapshot != lastPermissions else { return }
+        let hadPrevious = (lastPermissions != nil)
         lastPermissions = snapshot
         let notify: PermState
         switch snapshot.notifications {
@@ -696,7 +700,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         // 权限刚变过,上面三行已经是新的,下面那份验证结果就成了旧闻。
         // 真机上见过:三行都写"已授权",结果区还在说"键鼠 未授权",用户会以为坏了。
         // 与其显示矛盾,不如自己重跑一次。
-        if !verifying, !statusRow.isHidden || !resultsStack.arrangedSubviews.isEmpty {
+        // 第一次拿到快照不算"权限变了",开窗那次自检已经在跑,别再跑一遍。
+        if hadPrevious, !verifying, !statusRow.isHidden || !resultsStack.arrangedSubviews.isEmpty {
             authorizePressed()
         }
     }
