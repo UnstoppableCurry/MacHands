@@ -74,7 +74,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private let permButtons: [StyledButton] = MainWindowController.panes.map { _ in
         StyledButton(title: "", kind: .outline, size: 11, weight: .medium)
     }
-    private let authButton = StyledButton(title: "", kind: .filled(Theme.accentA), size: 13.5)
     private let verifySpinner = NSProgressIndicator()
     private let authStatus = NSTextField(labelWithString: "")
     private let statusRow = NSStackView()
@@ -414,11 +413,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
         authBox.addArrangedSubview(separator(width: inner))
 
-        authButton.title = L("auth.button")
-        authButton.target = self
-        authButton.action = #selector(authorizePressed)
-        authBox.addArrangedSubview(authButton)
-        authBox.setCustomSpacing(8, after: authButton)
+        // 用户读数 2026-09-06:"不要有 重新验证 这个环节,用户使用的时候就是点击就生效,越简单越好"。
+        // 所以卡片上不再有按钮:选范围点了就生效,自检自己跑(开窗、换范围、权限变动各跑一次)。
 
         verifySpinner.style = .spinning
         verifySpinner.controlSize = .small
@@ -476,8 +472,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             authBox.topAnchor.constraint(equalTo: authCard.topAnchor),
             authBox.bottomAnchor.constraint(equalTo: authCard.bottomAnchor),
             permsGrid.widthAnchor.constraint(lessThanOrEqualToConstant: inner),
-            authButton.widthAnchor.constraint(equalToConstant: inner),
-            authButton.heightAnchor.constraint(equalToConstant: 36),
             statusRow.widthAnchor.constraint(lessThanOrEqualToConstant: inner),
             resultsStack.widthAnchor.constraint(equalToConstant: inner),
             resultsSummary.widthAnchor.constraint(equalToConstant: inner),
@@ -552,9 +546,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if firstRender || previousMode != model.mode {
             selectScope(model.mode)
         }
-        if !verifying {
-            authButton.title = (model.authorizedAt == nil) ? L("auth.button") : L("auth.reverify")
-            authButton.isEnabled = true
+        if firstRender && !authCard.isHidden {
+            // 开窗就自检一次,用户不用找按钮
+            DispatchQueue.main.async { [weak self] in self?.authorizePressed() }
         }
         if let stamp = model.authorizedAt {
             let when = MainWindowController.dateText(milliseconds: stamp)
@@ -642,6 +636,11 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         for button in scopeButtons {
             button.state = (button === sender) ? .on : .off
         }
+        // 点了就生效(用户读数 2026-09-06:"用户使用的时候应当点击就直接切换模式")。
+        // 以前要再点一次「授权并验证」才提交,界面上的选中项和实际策略会同时矛盾;
+        // 更糟的是远程 agent 一旦被切进逐条审批就出不来——改模式的命令本身也要审批。
+        onSetMode?(selectedScope())
+        authorizePressed()      // 换了范围就把自检重跑一遍,结果永远跟着当前设置走
     }
 
     // MARK: - 系统权限
@@ -693,6 +692,13 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         setPermState(0, notify)
         setPermState(1, snapshot.screen ? .granted : .missing)
         setPermState(2, snapshot.accessibility ? .granted : .missing)
+
+        // 权限刚变过,上面三行已经是新的,下面那份验证结果就成了旧闻。
+        // 真机上见过:三行都写"已授权",结果区还在说"键鼠 未授权",用户会以为坏了。
+        // 与其显示矛盾,不如自己重跑一次。
+        if !verifying, !statusRow.isHidden || !resultsStack.arrangedSubviews.isEmpty {
+            authorizePressed()
+        }
     }
 
     private func setPermState(_ index: Int, _ state: PermState) {
@@ -720,12 +726,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: - 授权并验证
 
+    /// 跑一次自检。没有按钮了,由三件事触发:窗口打开、换授权范围、系统权限发生变化。
     @objc private func authorizePressed() {
         guard !verifying else { return }
+        // 模式在点单选那一刻已经生效;这里再传一次是幂等的,顺便记下"做过一次授权"的时刻。
         let mode = selectedScope()
-        // 先置位再回调:onAuthorize 会触发一次 render,不能让它把按钮又点亮。
         verifying = true
-        authButton.isEnabled = false
         authStatus.stringValue = L("auth.verifying")
         statusRow.isHidden = false
         verifySpinner.startAnimation(nil)
@@ -743,8 +749,6 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         verifySpinner.stopAnimation(nil)
         authStatus.stringValue = ""
         statusRow.isHidden = true
-        authButton.isEnabled = true
-        authButton.title = L("auth.reverify")
 
         for view in resultsStack.arrangedSubviews {
             resultsStack.removeArrangedSubview(view)
