@@ -3,3 +3,4 @@ dist/
 Resources/AppIcon.icns
 *.xcodeproj
 .swiftpm/
+build/

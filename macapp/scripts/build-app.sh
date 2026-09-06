@@ -40,6 +40,8 @@ SIGN_ID="-"
 DO_INSTALL=0
 DO_CLEAN=0
 UNIVERSAL=0
+CONFIG="release"
+SCRATCH=""
 
 if [ -t 1 ]; then
   R=$'\033[31m'; G=$'\033[32m'; Y=$'\033[33m'; D=$'\033[2m'; B=$'\033[1m'; Z=$'\033[0m'
@@ -71,6 +73,13 @@ usage() {
   --install          顺手拷进 /Applications
   --no-build         跳过 swift build,直接重新打包已有的二进制
   --clean            先清掉输出目录(给两次连 .build 一起清)
+  --debug            swift build -c debug:带 #if DEBUG 的预览入口
+                     (Sources/MacHands/DebugPreview.swift),只给改界面时看效果用
+  --scratch DIR      SwiftPM 的 --scratch-path。几个 worktree 并行编译时各用各的,
+                     不然会在同一个 .build 里互相踩
+  --bundle-id ID     CFBundleIdentifier 与签名标识(默认 app.machands.MacHands)。
+                     跟正式版并排跑的开发副本要换一个(比如 app.machands.MacHands.dev):
+                     同一个 id 的两份 App 会在 TCC 里撞条目,把正式版的授权搅乱
   -h, --help
 EOF
 }
@@ -93,6 +102,9 @@ while [ "$#" -gt 0 ]; do
     --install)   DO_INSTALL=1; shift ;;
     --no-build)  DO_BUILD=0; shift ;;
     --clean)     DO_CLEAN=1; CLEAN_LEVEL=$((CLEAN_LEVEL+1)); shift ;;
+    --debug)     CONFIG="debug"; shift ;;
+    --scratch)   [ "${2:-}" ] || die 2 "--scratch 要一个目录"; SCRATCH="$2"; shift 2 ;;
+    --bundle-id) [ "${2:-}" ] || die 2 "--bundle-id 要一个反向域名"; BUNDLE_ID="$2"; shift 2 ;;
     -h|--help)   usage; exit 0 ;;
     *)           die 2 "不认识的选项:$1" "./scripts/build-app.sh --help" ;;
   esac
@@ -139,13 +151,22 @@ if [ "$DO_CLEAN" = 1 ]; then
 fi
 
 # --------------------------------------------------------------------------- #
-BUILD_FLAGS=(-c release --product "$PRODUCT")
+BUILD_FLAGS=(-c "$CONFIG" --product "$PRODUCT")
 if [ "$UNIVERSAL" = 1 ]; then
   BUILD_FLAGS+=(--arch arm64 --arch x86_64)
 fi
+if [ -n "$SCRATCH" ]; then
+  BUILD_FLAGS+=(--scratch-path "$SCRATCH")
+fi
+if [ "$CONFIG" = "debug" ]; then
+  warn "debug 构建:带 DebugPreview 的预览参数,只给本机看界面用,别发给别人"
+fi
+if [ "$BUNDLE_ID" != "app.machands.MacHands" ]; then
+  info "bundle id:$BUNDLE_ID(不是正式版的 id,TCC / 通知 / 登录项都按这个单独记)"
+fi
 
 if [ "$DO_BUILD" = 1 ]; then
-    if [ "$UNIVERSAL" = 1 ]; then step "swift build -c release (universal)"; else step "swift build -c release"; fi
+    if [ "$UNIVERSAL" = 1 ]; then step "swift build -c $CONFIG (universal)"; else step "swift build -c $CONFIG"; fi
   ( cd "$APP_DIR" && swift build "${BUILD_FLAGS[@]}" ) \
     || die 1 "swift build 失败。" "往上翻编译错误;BUILD.md 里列了常见的几种"
 else
