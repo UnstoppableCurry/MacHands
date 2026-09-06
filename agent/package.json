@@ -1,6 +1,6 @@
 {
   "name": "machands",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。",
   "type": "module",
   "bin": {

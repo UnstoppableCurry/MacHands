@@ -158,7 +158,7 @@ test('CLI:--help 和 --version 不用连网', async (t) => {
   t.after(() => rmSync(home, { recursive: true, force: true }))
   const env = { MACHANDS_HOME: home }
   const v = await cli(['--version'], env)
-  assert.equal(v.out.trim(), '0.1.0')
+  assert.equal(v.out.trim(), JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version)
   const h = await cli(['help'], env)
   assert.equal(h.code, 0)
   for (const sub of ['pair', 'macs', 'run', 'put', 'get', 'shot', 'open', 'clip', 'info', 'mcp', 'forget', 'doctor']) {
