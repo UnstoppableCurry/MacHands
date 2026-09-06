@@ -36,6 +36,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     var onOpenWindow: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onAuthorize: (() -> Void)?
+    var onCheckForUpdates: (() -> Void)?
     var onQuit: (() -> Void)?
 
     private let statusItem: NSStatusItem
@@ -119,6 +120,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         if model.authorizedAt != nil {
             menu.addItem(disabledItem(Lf("menu.authorized", StatusItemController.modeName(model.mode))))
         }
+        // 有新版本时明说。装不装由「检查更新…」那一项决定,这里只是告诉他有。
+        if let newer = Updater.shared.newerVersionAvailable {
+            menu.addItem(disabledItem(Lf("menu.updateAvailable", newer)))
+        }
 
         if model.agents.isEmpty {
             let copy = NSMenuItem(title: L("menu.copyForAgent"),
@@ -178,6 +183,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         settings.target = self
         menu.addItem(settings)
 
+        let update = NSMenuItem(title: L("menu.checkUpdates"),
+                                action: #selector(checkUpdatesPressed), keyEquivalent: "u")
+        update.target = self
+        menu.addItem(update)
+
         menu.addItem(NSMenuItem.separator())
 
         let quit = NSMenuItem(title: L("menu.quit"), action: #selector(quit), keyEquivalent: "q")
@@ -235,6 +245,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     @objc private func openWindow() { onOpenWindow?() }
     @objc private func openSettings() { onOpenSettings?() }
     @objc private func authorizePressed() { onAuthorize?() }
+    @objc private func checkUpdatesPressed() { onCheckForUpdates?() }
     @objc private func quit() { onQuit?() }
 
     @objc private func pickMode(_ sender: NSMenuItem) {

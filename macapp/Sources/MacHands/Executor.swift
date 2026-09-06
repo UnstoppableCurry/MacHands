@@ -89,13 +89,17 @@ final class Executor {
     func handle(_ request: RPCRequest, agent: AgentContext, emit: @escaping Emit) {
         let subject = PolicyEngine.subject(method: request.method, params: request.params)
         let decision = policy.decide(agentId: agent.id, method: request.method, subject: subject)
+        // 一条请求"想干什么"。审批卡、审计日志、菜单栏都用它,而不是原始 shell。
+        let intent = PolicyEngine.intent(method: request.method, params: request.params)
 
         switch decision {
         case .allow:
-            start(request, agent: agent, subject: subject, decision: "allow", emit: emit)
+            // 没弹卡就放行的,记一笔 —— 卡片底部要告诉用户"这一类今天已经自动允许了几条"。
+            policy.noteAutoAllowed(area: intent.area)
+            start(request, agent: agent, intent: intent, decision: "allow", emit: emit)
 
         case .deny(let code, let reason):
-            finishDenied(request, agent: agent, subject: subject,
+            finishDenied(request, agent: agent, intent: intent,
                          decision: "deny:\(reason)", code: code,
                          message: reason, emit: emit)
 
@@ -107,23 +111,27 @@ final class Executor {
                                        subject: subject.isEmpty ? request.method : subject,
                                        cwd: request.string("cwd"),
                                        fromIP: agent.fromIP)
+            // 卡片从寄存柜里取意图(见 IntentBox 上的注释:审批卡文件正被另一条线重写,
+            // 这里先不给 ApprovalRequest 加字段)。
+            IntentBox.shared.put(intent, for: request.id)
             ApprovalPanelController.shared.ask(card) { [weak self] outcome in
                 guard let self = self else { return }
+                IntentBox.shared.take(request.id)
                 switch outcome {
                 case .once:
-                    self.start(request, agent: agent, subject: subject, decision: "once", emit: emit)
+                    self.start(request, agent: agent, intent: intent, decision: "once", emit: emit)
                 case .hour:
                     self.policy.grantHour(agentId: agent.id)
-                    self.start(request, agent: agent, subject: subject, decision: "hour", emit: emit)
+                    self.start(request, agent: agent, intent: intent, decision: "hour", emit: emit)
                 case .always:
                     if !subject.isEmpty { self.policy.alwaysAllow(prefix: subject) }
-                    self.start(request, agent: agent, subject: subject, decision: "always", emit: emit)
+                    self.start(request, agent: agent, intent: intent, decision: "always", emit: emit)
                 case .deny:
-                    self.finishDenied(request, agent: agent, subject: subject,
+                    self.finishDenied(request, agent: agent, intent: intent,
                                       decision: "deny", code: RPCErrorCode.denied.rawValue,
                                       message: "refused on the Mac", emit: emit)
                 case .timeout:
-                    self.finishDenied(request, agent: agent, subject: subject,
+                    self.finishDenied(request, agent: agent, intent: intent,
                                       decision: "timeout", code: RPCErrorCode.timeout.rawValue,
                                       message: "nobody answered on the Mac", emit: emit)
                 }
@@ -131,19 +139,23 @@ final class Executor {
         }
     }
 
-    private func finishDenied(_ request: RPCRequest, agent: AgentContext, subject: String,
+    private func finishDenied(_ request: RPCRequest, agent: AgentContext, intent: Intent,
                               decision: String, code: String, message: String, emit: @escaping Emit) {
         emit(.failure(id: request.id, code: code, message: message))
         audit.write(AuditLog.Entry(agentId: agent.id, agentName: agent.name,
                                    method: request.method,
-                                   summary: subject.isEmpty ? request.method : subject,
+                                   summary: IntentText.summary(intent),
+                                   raw: intent.detail.isEmpty ? nil : intent.detail,
                                    decision: decision, code: code, milliseconds: 0))
     }
 
-    private func start(_ request: RPCRequest, agent: AgentContext, subject: String,
+    private func start(_ request: RPCRequest, agent: AgentContext, intent: Intent,
                        decision: String, emit: @escaping Emit) {
         let began = Date()
-        onActivity?(agent.id, subject.isEmpty ? request.method : subject)
+        let summary = IntentText.summary(intent)
+        // 卡片和菜单栏给人看人话,审计日志两样都留:summary 给人读,raw 供取证。
+        let raw = intent.detail.isEmpty ? nil : intent.detail
+        onActivity?(agent.id, summary)
         work.async { [weak self] in
             guard let self = self else { return }
             let outcome = self.perform(request, agent: agent, emit: emit)
@@ -156,7 +168,8 @@ final class Executor {
             }
             self.audit.write(AuditLog.Entry(agentId: agent.id, agentName: agent.name,
                                             method: request.method,
-                                            summary: subject.isEmpty ? request.method : subject,
+                                            summary: summary,
+                                            raw: raw,
                                             decision: decision, code: code,
                                             milliseconds: elapsed))
         }
@@ -179,6 +192,7 @@ final class Executor {
         case "screen.list":   return .response(id: request.id, body: .object(["displays": displaysJSON()]))
         case "screen.window": return screenWindow(request, emit: emit)
         case "screen.record": return screenRecord(request, emit: emit)
+        case "screen.selfshot": return selfShot(request, emit: emit)
         case "open":          return openTarget(request)
         case "clip.get":      return clipboardGet(request)
         case "clip.set":      return clipboardSet(request)
@@ -196,6 +210,9 @@ final class Executor {
         case "power.assert", "power.release":
             return powerMethod(request)
         case "app.relaunch":  return relaunch(request)
+        case "app.update":    return updateApp(request)
+        case "app.doctor":    return doctor(request)
+        case "app.showWindow": return showWindow(request)
         case "verify.run":
             return .response(id: request.id, body: .object(["rows": .array(Verifier.run().map { $0.json })]))
         default:
@@ -1017,6 +1034,91 @@ final class Executor {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { NSApp.terminate(nil) }
         }
         return .ok(id: request.id)
+    }
+
+    /// 查一次 appcast,有新版就原地换包并重启(见 Updater 上的注释)。
+    /// 阻塞的那段在 `work` 队列上,不挡别的请求。
+    private func updateApp(_ request: RPCRequest) -> RPCOutbound {
+        let installIfNewer = request.bool("install") ?? true
+        let outcome = Updater.shared.runOnce(installIfNewer: installIfNewer)
+        return .response(id: request.id, body: outcome.json)
+    }
+
+    /// `machands doctor`:这台 Mac 上的这份 App 到底是什么状态。
+    /// 升级掉权限、多份拷贝抢身份这两个坑,都是从这里一眼看出来的。
+    private func doctor(_ request: RPCRequest) -> RPCOutbound {
+        let path = Bundle.main.bundlePath
+        let duplicates = InstallGuard.duplicates()
+        let settings = SettingsStore.shared.current
+        var body: [String: JSONValue] = [:]
+        body["version"] = .string(Updater.shared.currentVersion)
+        body["path"] = .string(path)
+        body["translocated"] = .bool(path.hasPrefix("/private/var/folders/")
+                                     || path.contains("/AppTranslocation/"))
+        body["duplicates"] = .strings(duplicates)
+        body["signed_by"] = Updater.signingAuthority(of: path).map { JSONValue.string($0) } ?? .null
+        body["notarized"] = Updater.isNotarized(path: path).map { JSONValue.bool($0) } ?? .null
+        body["dr"] = Updater.designatedRequirement(of: path).map { JSONValue.string($0) } ?? .null
+        body["perms"] = Permissions.snapshot().json
+        body["auto_update"] = .bool(settings.autoUpdate)
+        body["update_host"] = .string(settings.updateHost)
+        body["last_update_check"] = settings.lastUpdateCheck.map { JSONValue.number($0) } ?? .null
+        body["newer_available"] = Updater.shared.newerVersionAvailable.map { JSONValue.string($0) } ?? .null
+        body["relay_disabled"] = .bool(AppDelegate.relayDisabled)
+        return .response(id: request.id, body: .object(body))
+    }
+
+    /// 先把窗口打开,agent 才有东西可截(配合 screen.selfshot)。
+    private func showWindow(_ request: RPCRequest) -> RPCOutbound {
+        let done = DispatchSemaphore(value: 0)
+        DispatchQueue.main.async {
+            (NSApp.delegate as? AppDelegate)?.showMainWindow(activating: true)
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + 5)
+        // 窗口刚摆出来,给 AppKit 一拍时间画完,免得紧接着的 selfshot 截到空白。
+        Thread.sleep(forTimeInterval: 0.35)
+        return .ok(id: request.id)
+    }
+
+    /// 自画窗口。不需要屏幕录制授权 —— 授权掉了的时候,这是唯一还能看见界面的路。
+    private func selfShot(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
+        let which = SelfShot.Which.parse(request.string("window"))
+        let format = (request.string("format") ?? "png").lowercased() == "jpg" ? "jpg" : "png"
+        let scale = min(1.0, max(0.05, request.double("scale") ?? 1.0))
+        let quality = min(1.0, max(0.1, Double(request.int("quality") ?? 80) / 100.0))
+
+        let shots = SelfShot.capture(which: which, scale: scale, format: format, quality: quality)
+        guard !shots.isEmpty else {
+            return RPCOutbound.fail(request.id, .enoent, SelfShot.complaint(for: which))
+        }
+
+        var windows: [JSONValue] = []
+        for shot in shots {
+            let bytes = [UInt8](shot.data)
+            var index = 0
+            while index < bytes.count {
+                let end = min(index + Executor.chunkBytes, bytes.count)
+                let chunk = Data(bytes[index..<end])
+                emit(.stream(id: request.id,
+                             body: .object(["data": .string(chunk.base64EncodedString())])))
+                index = end
+            }
+            windows.append(.object(["title": .string(shot.title),
+                                    "w": .int(shot.width),
+                                    "h": .int(shot.height),
+                                    "bytes": .int(shot.data.count)]))
+        }
+
+        // 单窗口时保持和 screen.shot 一样的字段,agent 端不用分两套解析。
+        let first = shots[0]
+        return .response(id: request.id, body: .object([
+            "width": .int(first.width),
+            "height": .int(first.height),
+            "bytes": .int(shots.reduce(0) { $0 + $1.data.count }),
+            "format": .string(format),
+            "windows": .array(windows)
+        ]))
     }
 
     // MARK: - open / clip / notify

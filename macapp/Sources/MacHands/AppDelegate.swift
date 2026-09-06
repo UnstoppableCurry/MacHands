@@ -64,8 +64,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.onOpenWindow = { [weak self] in self?.showMainWindow(activating: true) }
         statusItem.onOpenSettings = { [weak self] in self?.showSettingsWindow() }
         statusItem.onAuthorize = { [weak self] in self?.showMainWindow(activating: true) }
+        statusItem.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
         statusItem.onQuit = { NSApp.terminate(nil) }
         self.statusItem = statusItem
+
+        // 发现新版本时菜单栏状态行要变一行字。
+        Updater.shared.onFoundNewer = { [weak self] _ in self?.refreshUI() }
 
         SettingsStore.shared.onChange = { [weak self] _ in
             DispatchQueue.main.async { self?.refreshUI() }
@@ -107,6 +111,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         RunLoop.main.add(timer, forMode: .common)
         heartbeat = timer
 
+        // 同 bundle id 的多份拷贝会互相抢身份、互相顶掉 TCC 授权,发现了就说。
+        InstallGuard.checkAtLaunch()
+        // 内置自动更新:换包走 App 自己,路径与签名不变,授权才有机会留住。
+        // `--no-relay` 的界面调试副本不查更新 —— 它不该把正式版换掉。
+        if !AppDelegate.relayDisabled {
+            Updater.shared.startScheduled()
+        }
+
         // SPEC §7.2:首启自动打开一次。
         if !settings.seenWelcome {
             SettingsStore.shared.update { $0.seenWelcome = true }
@@ -122,6 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         heartbeat?.invalidate()
         heartbeat = nil
+        Updater.shared.stopScheduled()
         relay?.stop()
         AuditLog.shared.flush()
         Log.shared.write("MacHands stopped")
@@ -137,7 +150,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - UI
 
-    private func showMainWindow(activating: Bool) {
+    /// 不是 private:`app.showWindow` 要从执行器里叫它(agent 先开窗,再 selfshot)。
+    func showMainWindow(activating: Bool) {
         if mainWindow == nil {
             let window = MainWindowController()
             window.onCopy = { [weak self] in self?.copyPairingBlock() }
@@ -247,6 +261,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Permissions.requestAll()
         Log.shared.write("authorized once: mode=\(mode.rawValue)")
         refreshUI()
+    }
+
+    /// 菜单「检查更新…」。查完弹一句结果 —— 用户主动点的,不该悄无声息。
+    private func checkForUpdates() {
+        Log.shared.write("manual update check")
+        DispatchQueue.global(qos: .userInitiated).async {
+            let outcome = Updater.shared.runOnce(installIfNewer: true)
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = L("app.name")
+                switch outcome.status {
+                case .upToDate:
+                    alert.informativeText = Lf("update.alert.current", outcome.current)
+                case .updating:
+                    alert.informativeText = Lf("update.alert.installing", outcome.latest ?? "")
+                case .failed:
+                    alert.alertStyle = .warning
+                    alert.informativeText = outcome.reason ?? L("update.err.badAppcast")
+                }
+                alert.addButton(withTitle: L("update.ok"))
+                _ = alert.runModal()
+            }
+        }
     }
 
     private func togglePause() {

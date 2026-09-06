@@ -84,6 +84,15 @@ struct Settings: Codable, Equatable {
     var language: String
     /// SPEC §10.2:用户点过「授权并验证」的时刻(毫秒)。nil = 还没做过一次授权。
     var authorizedAt: Double?
+    /// 内置自动更新。关掉之后只是不主动查,菜单里手动「检查更新…」照旧能用。
+    var autoUpdate: Bool
+    /// 上一次查更新的时刻(毫秒)。
+    var lastUpdateCheck: Double?
+    /// appcast 的来源,**必须是 https**。更新包本身有 Ed25519 验签挡掉包,
+    /// 但明文 HTTP 会把"这台 Mac 装的是哪个版本"泄露给路上的任何人。
+    var updateHost: String
+
+    static let defaultUpdateHost = "https://machands.app"
 
     static func makeDefault() -> Settings {
         return Settings(relayURL: Settings.defaultRelayURL,
@@ -95,12 +104,17 @@ struct Settings: Codable, Equatable {
                         seenWelcome: false,
                         pinnedRelayKey: "",
                         language: "auto",
-                        authorizedAt: nil)
+                        authorizedAt: nil,
+                        autoUpdate: true,
+                        lastUpdateCheck: nil,
+                        updateHost: Settings.defaultUpdateHost)
     }
 
     init(relayURL: String, macName: String, agents: [AuthorizedAgent],
          policy: PolicyState, launchAtLogin: Bool, license: String, seenWelcome: Bool,
-         pinnedRelayKey: String, language: String, authorizedAt: Double? = nil) {
+         pinnedRelayKey: String, language: String, authorizedAt: Double? = nil,
+         autoUpdate: Bool = true, lastUpdateCheck: Double? = nil,
+         updateHost: String = Settings.defaultUpdateHost) {
         self.relayURL = relayURL
         self.macName = macName
         self.agents = agents
@@ -111,6 +125,9 @@ struct Settings: Codable, Equatable {
         self.pinnedRelayKey = pinnedRelayKey
         self.language = language
         self.authorizedAt = authorizedAt
+        self.autoUpdate = autoUpdate
+        self.lastUpdateCheck = lastUpdateCheck
+        self.updateHost = updateHost
     }
 
     /// 旧版本写的文件不会有新键;缺一个键不该让整份配置读不出来。
@@ -126,6 +143,11 @@ struct Settings: Codable, Equatable {
         pinnedRelayKey = try c.decodeIfPresent(String.self, forKey: .pinnedRelayKey) ?? ""
         language = try c.decodeIfPresent(String.self, forKey: .language) ?? "auto"
         authorizedAt = try c.decodeIfPresent(Double.self, forKey: .authorizedAt)
+        autoUpdate = try c.decodeIfPresent(Bool.self, forKey: .autoUpdate) ?? true
+        lastUpdateCheck = try c.decodeIfPresent(Double.self, forKey: .lastUpdateCheck)
+        let host = try c.decodeIfPresent(String.self, forKey: .updateHost) ?? Settings.defaultUpdateHost
+        // 从旧配置里读到的 host 也得过一遍 https 检查,别让手改过的文件把更新降级成明文。
+        updateHost = host.hasPrefix("https://") ? host : Settings.defaultUpdateHost
     }
 
     static func suggestedMacName() -> String {

@@ -54,10 +54,14 @@ enum Verifier {
             let ok = result.launchError == nil && (size?.intValue ?? 0) > 0
             try? FileManager.default.removeItem(at: shot)
             rows.append(Row(key: "screen", ok: ok,
-                            detail: ok ? "24×24 png, \(size?.intValue ?? 0) bytes" : result.complaint,
+                            detail: ok ? "24×24 png, \(size?.intValue ?? 0) bytes"
+                                       : result.complaint + " · " + L("verify.screen.fallback"),
                             fix: ok ? nil : L("perm.screen.rpc")))
         } else {
-            rows.append(Row(key: "screen", ok: false, detail: L("perm.state.no"), fix: L("perm.screen.rpc")))
+            // 截不了屏时顺手告诉对面还有一条路,免得 agent 以为界面彻底看不见了。
+            rows.append(Row(key: "screen", ok: false,
+                            detail: L("perm.state.no") + " · " + L("verify.screen.fallback"),
+                            fix: L("perm.screen.rpc")))
         }
 
         // 4. 键鼠:把光标移到它现在的位置 —— 走一遍真实的 CGEvent 路径,肉眼看不出变化。
@@ -101,6 +105,18 @@ enum Verifier {
         rows.append(Row(key: "mcp", ok: true,
                         detail: names.isEmpty ? "0 servers configured" : names.prefix(6).joined(separator: ", "),
                         fix: nil))
+
+        // 8. 更新通道:appcast 拿得到吗。拿不到 = 以后发了新版这台机器不会知道,
+        //    而"换包"正是权限掉光的那件事的解法,所以它值一行自检。
+        rows.append(updateRow())
         return rows
+    }
+
+    private static func updateRow() -> Row {
+        // `probe` 而不是 `runOnce`:自检是用户在等的动作,不能让它去装更新,
+        // 也不能让它卡在 30 秒的网络超时上。
+        let probe = Updater.shared.probe()
+        return Row(key: "update", ok: probe.ok, detail: probe.detail,
+                   fix: probe.ok ? nil : L("update.fix"))
     }
 }

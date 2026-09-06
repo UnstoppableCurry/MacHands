@@ -25,6 +25,23 @@ public struct RPCRequest: Equatable {
     public func double(_ key: String) -> Double? { return params[key]?.doubleValue }
     public func bool(_ key: String) -> Bool? { return params[key]?.boolValue }
 
+    /// agent 可以在任何一条请求上附一句"为什么"(人话目的)。审批卡拿它当大标题——
+    /// 用户要看的是"它想干什么",不是一行 shell。空白与超长在这里就收拾干净,
+    /// 后面的界面代码可以直接用。
+    public var why: String? {
+        return RPCRequest.cleanWhy(params["why"]?.stringValue)
+    }
+
+    /// 120 字上限:再长的一句话会把卡片上的按钮挤下去。
+    public static func cleanWhy(_ raw: String?) -> String? {
+        guard let raw = raw else { return nil }
+        let flattened = raw.replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if flattened.isEmpty { return nil }
+        if flattened.count <= 120 { return flattened }
+        return String(flattened.prefix(119)) + "…"
+    }
+
     public static func decode(_ data: Data) -> RPCRequest? {
         guard let value = JSONValue.parse(data),
               let id = value["id"]?.stringValue,

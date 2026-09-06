@@ -1,7 +1,7 @@
 import Foundation
 
 /// SPEC §5.2:一切审批与执行都写 `~/Library/Logs/MacHands/audit.log`,
-/// JSONL,一行一条:ts、agent、method、summary、decision、code、ms。
+/// JSONL,一行一条:ts、agent、method、summary(人话)、raw(命令原文)、decision、code、ms。
 ///
 /// 这份日志是用户唯一能事后查"到底谁让我的 Mac 干了什么"的东西,所以:
 ///   * 一行一条,`grep` 与 `jq` 都能直接读;
@@ -14,7 +14,10 @@ public final class AuditLog {
         public var agentId: String
         public var agentName: String
         public var method: String
+        /// 人话摘要(审批卡的标题)。给人看的。
         public var summary: String
+        /// 真正执行的东西(命令原文/路径/参数)。取证靠它,不能省。
+        public var raw: String?
         public var decision: String
         public var code: String?
         public var milliseconds: Int?
@@ -24,6 +27,7 @@ public final class AuditLog {
                     agentName: String,
                     method: String,
                     summary: String,
+                    raw: String? = nil,
                     decision: String,
                     code: String? = nil,
                     milliseconds: Int? = nil) {
@@ -32,6 +36,7 @@ public final class AuditLog {
             self.agentName = agentName
             self.method = method
             self.summary = summary
+            self.raw = raw
             self.decision = decision
             self.code = code
             self.milliseconds = milliseconds
@@ -46,6 +51,7 @@ public final class AuditLog {
                 "summary": .string(AuditLog.clip(summary)),
                 "decision": .string(decision)
             ]
+            object["raw"] = raw.map { JSONValue.string(AuditLog.clip($0)) } ?? JSONValue.null
             object["code"] = code.map { JSONValue.string($0) } ?? JSONValue.null
             object["ms"] = milliseconds.map { JSONValue.int($0) } ?? JSONValue.null
             return .object(object)

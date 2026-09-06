@@ -114,6 +114,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         window.title = L("app.name")
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
+        // `screen.selfshot` 靠这个标认出主窗口(标题会被本地化,不能拿来认)。
+        window.identifier = SelfShot.mainWindowIdentifier
         window.center()
         // 存储属性在 super.init 之前不能读回来,所以这里没有任何 self.xxx。
         super.init(window: window)
@@ -169,6 +171,15 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         spinner.style = .spinning
         spinner.controlSize = .small
         spinner.isDisplayedWhenStopped = false
+        // 转圈不转的两个老原因,一次堵掉:
+        //  1. 在 NSStackView 里没有固有尺寸约束时会被压成 0×0 —— 画面上就是"静止的一点";
+        //  2. 动画跟着主 run loop 走,主线程一忙就停 —— 换成独立线程驱动。
+        spinner.usesThreadedAnimation = true
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            spinner.widthAnchor.constraint(equalToConstant: 16),
+            spinner.heightAnchor.constraint(equalToConstant: 16)
+        ])
         waitingLabel.font = NSFont.systemFont(ofSize: 12)
         waitingLabel.textColor = NSColor.secondaryLabelColor
         waitingRow.orientation = .horizontal
@@ -498,6 +509,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
         // 审批卡从不 activate;主窗口是用户自己叫出来的,不给焦点反而像没打开。
         if activating { NSApp.activate(ignoringOtherApps: true) }
+        // render 往往在窗口还没上屏时就跑过了,那时 startAnimation 不生效。
+        // 窗口摆出来之后再踢一脚,这样"等待中"的圈是真的在转。
+        if !waitingRow.isHidden { spinner.startAnimation(nil) }
         startPermissionPolling()
     }
 
