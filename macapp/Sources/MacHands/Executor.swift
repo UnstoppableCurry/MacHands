@@ -42,7 +42,7 @@ enum Notifier {
     }
 }
 
-/// SPEC §5.1 的全部方法。
+/// SPEC §5.1 + §11 的全部方法。
 ///
 /// 每一条请求都先过策略,再执行,最后写一行审计日志。执行在自己的并发队列上,
 /// 所以一条跑十分钟的 `run` 不会挡住别的 agent 的 `sys.info`。
@@ -59,13 +59,11 @@ final class Executor {
     /// 一次 fs.get / screen.shot 的分块上限。
     /// 单帧 ≤ 1 MiB(SPEC §4.5),密文再 base64 一次会涨 4/3,所以取 96 KiB 原始字节。
     static let chunkBytes = 96 * 1024
-    /// SPEC §5.1 写的是 fs.get ≤ 768 KiB/次,但 768 KiB 实际上发不出去:
-    /// 原始字节先 base64 进 JSON(×4/3),整条明文再加密、再 base64url 一次(又 ×4/3),
-    /// 768 KiB 到中继那儿是 1.37 MiB,而单帧上限是 1 MiB(SPEC §4.5)。
-    /// 512 KiB 算下来约 911 KiB,留得住余量。要更多就多问几次 —— `eof` 就是干这个的。
-    /// (agent 的 `machands get` 本来就按 512 KiB 分块要,见 agent/src/cli.mjs 的 GET_CHUNK。)
+    /// fs.get / job.tail 单次上限。原始字节 base64 进 JSON(×4/3),整条明文再加密、再
+    /// base64url 一次(又 ×4/3),512 KiB 算下来约 911 KiB,留得住余量。
     static let maxRead = 512 * 1024
     static let defaultTimeout: TimeInterval = 600
+    static let defaultTools = ["godot", "blender", "xcodebuild", "swift", "node", "python3", "brew", "cliclick", "ffmpeg", "git"]
 
     private let policy: PolicyEngine
     private let audit: AuditLog
@@ -77,6 +75,9 @@ final class Executor {
     var onActivity: ((String, String) -> Void)?
     /// 屏幕录制没授权时弹一次引导(SPEC §7.4)。
     private var screenGuidanceShown = false
+    /// `power.assert` 起的 caffeinate。
+    private static var caffeinate: Process?
+    private static let caffeinateLock = NSLock()
 
     init(policy: PolicyEngine, audit: AuditLog = AuditLog.shared) {
         self.policy = policy
@@ -167,24 +168,50 @@ final class Executor {
     /// 自己 emit。
     private func perform(_ request: RPCRequest, agent: AgentContext, emit: @escaping Emit) -> RPCOutbound {
         switch request.method {
-        case "sys.info":    return systemInfo(request)
-        case "run":         return runCommand(request, emit: emit)
-        case "fs.put":      return filePut(request)
-        case "fs.get":      return fileGet(request)
-        case "fs.ls":       return fileList(request)
-        case "screen.shot": return screenShot(request, emit: emit)
-        case "screen.list": return screenList(request)
-        case "open":        return openTarget(request)
-        case "clip.get":    return clipboardGet(request)
-        case "clip.set":    return clipboardSet(request)
-        case "notify":      return notifyUser(request)
-        case "policy.get":  return .response(id: request.id, body: policy.publicSnapshot())
+        case "sys.info":      return systemInfo(request)
+        case "sys.perms":     return .response(id: request.id, body: Permissions.snapshot().json)
+        case "sys.which":     return whichTools(request)
+        case "run":           return runCommand(request, emit: emit)
+        case "fs.put":        return filePut(request)
+        case "fs.get":        return fileGet(request, emit: emit)
+        case "fs.ls":         return fileList(request)
+        case "screen.shot":   return screenShot(request, emit: emit)
+        case "screen.list":   return .response(id: request.id, body: .object(["displays": displaysJSON()]))
+        case "screen.window": return screenWindow(request, emit: emit)
+        case "screen.record": return screenRecord(request, emit: emit)
+        case "open":          return openTarget(request)
+        case "clip.get":      return clipboardGet(request)
+        case "clip.set":      return clipboardSet(request)
+        case "notify":        return notifyUser(request)
+        case "policy.get":    return .response(id: request.id, body: policy.publicSnapshot())
+        case "policy.check":  return policyCheck(request, agent: agent)
+        case "input.where", "input.move", "input.click", "input.drag", "input.scroll", "input.key", "input.type":
+            return inputMethod(request)
+        case "job.submit", "job.status", "job.tail", "job.result", "job.kill", "job.list":
+            return jobMethod(request)
+        case "session.open", "session.write", "session.read", "session.close":
+            return sessionMethod(request)
+        case "mcp.servers", "mcp.open", "mcp.list", "mcp.call", "mcp.close":
+            return mcpMethod(request)
+        case "power.assert", "power.release":
+            return powerMethod(request)
+        case "app.relaunch":  return relaunch(request)
+        case "verify.run":
+            return .response(id: request.id, body: .object(["rows": .array(Verifier.run().map { $0.json })]))
         default:
             return RPCOutbound.fail(request.id, .badParams, "unknown method \(request.method)")
         }
     }
 
-    // MARK: - sys.info
+    /// 新模块统一抛 `InputController.Failure`;这里翻译成 RPC 错误。
+    private func fail(_ request: RPCRequest, _ error: Error) -> RPCOutbound {
+        if let failure = error as? InputController.Failure {
+            return RPCOutbound.fail(request.id, failure.code, failure.message)
+        }
+        return RPCOutbound.fail(request.id, .eio, error.localizedDescription)
+    }
+
+    // MARK: - sys.*
 
     private func systemInfo(_ request: RPCRequest) -> RPCOutbound {
         let version = ProcessInfo.processInfo.operatingSystemVersion
@@ -204,6 +231,63 @@ final class Executor {
         body["xcode"] = optional(firstLine(Shell.run("/usr/bin/xcodebuild", ["-version"], timeout: 15).stdout))
         body["node"] = optional(firstLine(Shell.run("/bin/zsh", ["-lc", "node -v"], timeout: 15).stdout))
         body["python"] = optional(firstLine(Shell.run("/bin/zsh", ["-lc", "python3 -V"], timeout: 15).stdout))
+
+        // SPEC §11:开工体检一次拿全
+        let memGB = Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
+        body["mem_gb"] = .number((memGB * 10).rounded() / 10)
+        if let attributes = try? FileManager.default.attributesOfFileSystem(forPath: home),
+           let free = (attributes[.systemFreeSize] as? NSNumber)?.doubleValue {
+            body["disk_free_gb"] = .number((free / 1_000_000_000 * 10).rounded() / 10)
+        } else {
+            body["disk_free_gb"] = .null
+        }
+        body["cpu"] = optional(Shell.run("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"], timeout: 5).trimmedOut)
+        body["gpu"] = gpuName()
+        body["displays"] = displaysJSON()
+        body["tools"] = whichMap(Executor.defaultTools)
+        body["app_version"] = .string(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev")
+        return .response(id: request.id, body: .object(body))
+    }
+
+    private func gpuName() -> JSONValue {
+        let result = Shell.run("/usr/sbin/system_profiler", ["SPDisplaysDataType", "-json"], timeout: 25)
+        guard result.ok, let data = result.stdout.data(using: .utf8),
+              let root = JSONValue.parse(data)?.objectValue,
+              let first = root["SPDisplaysDataType"]?.arrayValue?.first?.objectValue else { return .null }
+        guard let name = first["sppci_model"]?.stringValue ?? first["_name"]?.stringValue else { return .null }
+        return .string(name)
+    }
+
+    private func whichMap(_ names: [String]) -> JSONValue {
+        let safe = names.filter { !$0.isEmpty && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" || $0 == "." || $0 == "+" } }
+        guard !safe.isEmpty else { return .object([:]) }
+        let script = "for t in \(safe.joined(separator: " ")); do printf '%s=%s\\n' \"$t\" \"$(command -v $t 2>/dev/null)\"; done"
+        let result = Shell.run("/bin/zsh", ["-lc", script], timeout: 20)
+        var out: [String: JSONValue] = [:]
+        for name in safe { out[name] = .null }
+        for line in result.stdout.split(separator: "\n") {
+            guard let equals = line.firstIndex(of: "=") else { continue }
+            let key = String(line[line.startIndex..<equals])
+            let value = String(line[line.index(after: equals)...]).trimmingCharacters(in: .whitespaces)
+            out[key] = value.isEmpty ? .null : .string(value)
+        }
+        return .object(out)
+    }
+
+    private func whichTools(_ request: RPCRequest) -> RPCOutbound {
+        let names = request.param("names")?.arrayValue?.compactMap { $0.stringValue } ?? Executor.defaultTools
+        return .response(id: request.id, body: whichMap(names))
+    }
+
+    private func policyCheck(_ request: RPCRequest, agent: AgentContext) -> RPCOutbound {
+        let method = request.string("method") ?? "run"
+        let subject = request.string("subject") ?? ""
+        let decision = policy.check(agentId: agent.id, method: method, subject: subject)
+        var body: [String: JSONValue] = ["decision": .string(decision.label), "method": .string(method)]
+        if case .deny(let code, let reason) = decision {
+            body["reason"] = .string(reason)
+            body["code"] = .string(code)
+        }
         return .response(id: request.id, body: .object(body))
     }
 
@@ -221,7 +305,6 @@ final class Executor {
     private func batteryPercent() -> JSONValue {
         let result = Shell.run("/usr/bin/pmset", ["-g", "batt"], timeout: 5)
         guard result.launchError == nil else { return .null }
-        // "…	100%; charged; 0:00 remaining present: true"
         for piece in result.stdout.split(whereSeparator: { $0 == "\t" || $0 == ";" || $0 == " " }) {
             if piece.hasSuffix("%"), let value = Int(piece.dropLast()) {
                 return .int(value)
@@ -250,12 +333,7 @@ final class Executor {
             directory = expanded
         }
 
-        var extra: [String: String] = [:]
-        if let environment = request.param("env")?.objectValue {
-            for (key, value) in environment {
-                if let text = value.stringValue { extra[key] = text }
-            }
-        }
+        let extra = envDictionary(request)
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shellPath)
@@ -291,11 +369,12 @@ final class Executor {
                                     "cannot start \(shellPath): \(error.localizedDescription)")
         }
 
-        // `DispatchWorkItem` 的闭包是 @Sendable 的,捕获不了可变局部变量,所以用盒子。
+        // SPEC §11.1:超时杀整棵树,不只杀 zsh。
+        let pid = process.processIdentifier
         let timedOut = LockedBox(false)
         let killer = DispatchWorkItem {
             timedOut.value = true
-            if process.isRunning { process.terminate() }
+            ProcessTree.terminate(tree: pid)
         }
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout, execute: killer)
 
@@ -323,6 +402,16 @@ final class Executor {
                                                        "ms": .int(milliseconds)]))
     }
 
+    private func envDictionary(_ request: RPCRequest) -> [String: String] {
+        var extra: [String: String] = [:]
+        if let environment = request.param("env")?.objectValue {
+            for (key, value) in environment {
+                if let text = value.stringValue { extra[key] = text }
+            }
+        }
+        return extra
+    }
+
     private static func emitChunks(_ data: Data, key: String, id: String, emit: Emit) {
         let bytes = [UInt8](data)
         var index = 0
@@ -335,13 +424,23 @@ final class Executor {
         }
     }
 
+    /// 把一个文件按块流出去(截图、录屏、目录包)。
+    private static func streamFile(_ url: URL, id: String, emit: Emit) -> Int {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return 0 }
+        defer { try? handle.close() }
+        var total = 0
+        while let chunk = try? handle.read(upToCount: Executor.chunkBytes), !chunk.isEmpty {
+            total += chunk.count
+            emit(.stream(id: id, body: .object(["data": .string(chunk.base64EncodedString())])))
+        }
+        return total
+    }
+
     // MARK: - fs.*
 
     /// `data` 字段:发出去用标准 base64(SPEC §5.1 写的就是 base64);
     /// 收进来两种都认,免得对面按 §2 的通则用了 base64url。
     private static func decodeBinary(_ text: String) -> Data? {
-        // 顺序有讲究:`.ignoreUnknownCharacters` 会把 base64url 的 `-` 和 `_`
-        // 当成噪声**丢掉**,于是安静地解出一段错的字节。所以先看有没有这两个字符。
         if text.contains("-") || text.contains("_") { return Base64URL.decode(text) }
         if let data = Data(base64Encoded: text, options: [.ignoreUnknownCharacters]) { return data }
         return Base64URL.decode(text)
@@ -383,7 +482,7 @@ final class Executor {
         return .response(id: request.id, body: .object(["bytes": .int(data.count)]))
     }
 
-    private func fileGet(_ request: RPCRequest) -> RPCOutbound {
+    private func fileGet(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
         guard let rawPath = request.string("path"), !rawPath.isEmpty else {
             return RPCOutbound.fail(request.id, .badParams, "fs.get needs path")
         }
@@ -393,8 +492,22 @@ final class Executor {
         guard fm.fileExists(atPath: path, isDirectory: &isDir) else {
             return RPCOutbound.fail(request.id, .enoent, "no such file: \(rawPath)")
         }
-        guard !isDir.boolValue else {
-            return RPCOutbound.fail(request.id, .badParams, "\(rawPath) is a folder — use fs.ls")
+        if isDir.boolValue {
+            // SPEC §11:目录自动打包成 tar.gz 流回去,agent 端解包。
+            let temporary = fm.temporaryDirectory.appendingPathComponent("machands-\(UUID().uuidString).tar.gz")
+            defer { try? fm.removeItem(at: temporary) }
+            let parent = (path as NSString).deletingLastPathComponent
+            let name = (path as NSString).lastPathComponent
+            let result = Shell.run("/usr/bin/tar", ["czf", temporary.path, "-C", parent, name], timeout: 900)
+            guard result.ok else {
+                return RPCOutbound.fail(request.id, .eio, "tar failed: \(result.complaint)")
+            }
+            let bytes = Executor.streamFile(temporary, id: request.id, emit: emit)
+            return .response(id: request.id, body: .object(["archive": .bool(true),
+                                                            "name": .string(name),
+                                                            "bytes": .int(bytes),
+                                                            "size": .int(bytes),
+                                                            "eof": .bool(true)]))
         }
         guard let attributes = try? fm.attributesOfItem(atPath: path),
               let size = (attributes[.size] as? NSNumber)?.intValue else {
@@ -441,7 +554,7 @@ final class Executor {
 
         let depth = max(1, min(request.int("depth") ?? 1, 5))
         var entries: [JSONValue] = []
-        var frontier: [(String, String, Int)] = [(root, "", 1)]   // 绝对路径、相对名、层
+        var frontier: [(String, String, Int)] = [(root, "", 1)]
         var guardCount = 0
 
         while !frontier.isEmpty {
@@ -463,8 +576,6 @@ final class Executor {
                 } else {
                     type = childIsDir.boolValue ? "dir" : "file"
                 }
-                // mtime 是**毫秒**:agent/test/fake-mac.mjs 用的是 `st.mtimeMs`,
-                // 真假两个 Mac 实现必须给出同一个量纲。
                 entries.append(.object(["name": .string(relative),
                                         "type": .string(type),
                                         "size": .int(size),
@@ -480,27 +591,97 @@ final class Executor {
 
     // MARK: - screen.*
 
-    private func screenShot(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
-        // SPEC §7.4:TCC 没授权就明确说出来,并弹一次引导。
-        if !CGPreflightScreenCaptureAccess() {
-            _ = CGRequestScreenCaptureAccess()
-            showScreenGuidanceOnce()
-            return RPCOutbound.fail(request.id, .eio, L("perm.screen.rpc"))
-        }
+    private func requireScreenAccess(_ request: RPCRequest) -> RPCOutbound? {
+        if Permissions.screenRecording() { return nil }
+        Permissions.requestScreenRecording()
+        showScreenGuidanceOnce()
+        return RPCOutbound.fail(request.id, .eio, L("perm.screen.rpc"))
+    }
 
+    private func screenShot(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
+        if let denied = requireScreenAccess(request) { return denied }
         let format = (request.string("format") ?? "png").lowercased() == "jpg" ? "jpg" : "png"
         let display = max(0, request.int("display") ?? 0)
-        let scale = min(1.0, max(0.05, request.double("scale") ?? 1.0))
-        let quality = min(1.0, max(0.1, Double(request.int("quality") ?? 80) / 100.0))
-
         let temporary = FileManager.default.temporaryDirectory
             .appendingPathComponent("machands-\(UUID().uuidString).\(format)")
         defer { try? FileManager.default.removeItem(at: temporary) }
-
         // `-x` 不发快门声;`-D` 是 1 起数的显示器序号。
         let result = Shell.run("/usr/sbin/screencapture",
                                ["-x", "-t", format, "-D", String(display + 1), temporary.path],
                                timeout: 30)
+        return deliverImage(from: temporary, capture: result, request: request, format: format, emit: emit)
+    }
+
+    /// SPEC §11 `screen.window`:前台窗口,或按 App 名 / 标题匹配的窗口。
+    private func screenWindow(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
+        if let denied = requireScreenAccess(request) { return denied }
+        let wantedApp = request.string("app")?.lowercased()
+        let wantedTitle = request.string("title")?.lowercased()
+        var frontName = ""
+        let readFront = { frontName = (NSWorkspace.shared.frontmostApplication?.localizedName ?? "").lowercased() }
+        if Thread.isMainThread { readFront() } else { DispatchQueue.main.sync(execute: readFront) }
+
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        guard let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
+            return RPCOutbound.fail(request.id, .eio, "cannot list windows")
+        }
+        var chosen: Int? = nil
+        for info in windows {
+            let layer = info[kCGWindowLayer as String] as? Int ?? 0
+            guard layer == 0 else { continue }
+            let owner = (info[kCGWindowOwnerName as String] as? String ?? "").lowercased()
+            let title = (info[kCGWindowName as String] as? String ?? "").lowercased()
+            if let wanted = wantedApp, !wanted.isEmpty {
+                guard owner.contains(wanted) else { continue }
+            } else if !frontName.isEmpty {
+                guard owner == frontName else { continue }
+            }
+            if let wanted = wantedTitle, !wanted.isEmpty, !title.contains(wanted) { continue }
+            if let number = info[kCGWindowNumber as String] as? Int {
+                chosen = number
+                break
+            }
+        }
+        guard let windowNumber = chosen else {
+            return RPCOutbound.fail(request.id, .enoent, "no matching window" + (wantedApp.map { " for \($0)" } ?? ""))
+        }
+        let format = (request.string("format") ?? "png").lowercased() == "jpg" ? "jpg" : "png"
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("machands-\(UUID().uuidString).\(format)")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let result = Shell.run("/usr/sbin/screencapture",
+                               ["-x", "-o", "-t", format, "-l", String(windowNumber), temporary.path],
+                               timeout: 30)
+        return deliverImage(from: temporary, capture: result, request: request, format: format, emit: emit)
+    }
+
+    /// SPEC §11 `screen.record`:`screencapture -v -V <秒>`,录成 .mov 分块流回。
+    private func screenRecord(_ request: RPCRequest, emit: @escaping Emit) -> RPCOutbound {
+        if let denied = requireScreenAccess(request) { return denied }
+        let seconds = min(120, max(1, request.int("seconds") ?? 5))
+        let display = max(0, request.int("display") ?? 0)
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("machands-\(UUID().uuidString).mov")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let result = Shell.run("/usr/sbin/screencapture",
+                               ["-x", "-v", "-V", String(seconds), "-D", String(display + 1), temporary.path],
+                               timeout: TimeInterval(seconds) + 40)
+        guard result.launchError == nil else {
+            return RPCOutbound.fail(request.id, .eio, result.complaint)
+        }
+        let size = (try? FileManager.default.attributesOfItem(atPath: temporary.path))?[.size] as? NSNumber
+        guard (size?.intValue ?? 0) > 0 else {
+            return RPCOutbound.fail(request.id, .eio,
+                                    result.status == 0 ? "screencapture produced no video" : result.complaint)
+        }
+        let bytes = Executor.streamFile(temporary, id: request.id, emit: emit)
+        return .response(id: request.id, body: .object(["bytes": .int(bytes),
+                                                        "seconds": .int(seconds),
+                                                        "format": .string("mov")]))
+    }
+
+    private func deliverImage(from temporary: URL, capture result: CommandResult,
+                              request: RPCRequest, format: String, emit: @escaping Emit) -> RPCOutbound {
         guard result.launchError == nil else {
             return RPCOutbound.fail(request.id, .eio, result.complaint)
         }
@@ -512,6 +693,8 @@ final class Executor {
         guard let rep = NSBitmapImageRep(data: original) else {
             return RPCOutbound.fail(request.id, .eio, "the screenshot is not readable as an image")
         }
+        let scale = min(1.0, max(0.05, request.double("scale") ?? 1.0))
+        let quality = min(1.0, max(0.1, Double(request.int("quality") ?? 80) / 100.0))
 
         var payload = original
         var width = rep.pixelsWide
@@ -523,7 +706,6 @@ final class Executor {
                 height = resized.2
             }
         } else if format == "jpg" {
-            // JPEG 的压缩率由我们说了算,不然 screencapture 给的默认值大得离谱。
             if let data = rep.representation(using: .jpeg,
                                              properties: [.compressionFactor: quality]) {
                 payload = data
@@ -565,8 +747,6 @@ final class Executor {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         context.imageInterpolation = .high
-        // `from:` 用的是 rep 的点坐标(Retina 截图 size = pixels/2),不是像素;
-        // 传 .zero 表示整张图,否则 2x 屏只会画出左下角四分之一。
         _ = rep.draw(in: NSRect(x: 0, y: 0, width: width, height: height),
                      from: .zero,
                      operation: .copy,
@@ -585,15 +765,12 @@ final class Executor {
         return (out, width, height)
     }
 
-    private func screenList(_ request: RPCRequest) -> RPCOutbound {
+    private func displaysJSON() -> JSONValue {
         var count: UInt32 = 0
         _ = CGGetActiveDisplayList(0, nil, &count)
-        guard count > 0 else {
-            return .response(id: request.id, body: .object(["displays": .array([])]))
-        }
+        guard count > 0 else { return .array([]) }
         var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
         _ = CGGetActiveDisplayList(count, &ids, &count)
-
         var displays: [JSONValue] = []
         for (index, identifier) in ids.prefix(Int(count)).enumerated() {
             displays.append(.object([
@@ -604,7 +781,7 @@ final class Executor {
                 "main": .bool(CGDisplayIsMain(identifier) != 0)
             ]))
         }
-        return .response(id: request.id, body: .object(["displays": .array(displays)]))
+        return .array(displays)
     }
 
     private func showScreenGuidanceOnce() {
@@ -617,10 +794,229 @@ final class Executor {
             alert.addButton(withTitle: L("perm.screen.open"))
             alert.addButton(withTitle: L("perm.later"))
             if alert.runModal() == .alertFirstButtonReturn {
-                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
-                if let url = url { _ = NSWorkspace.shared.open(url) }
+                Permissions.open(.screen)
             }
         }
+    }
+
+    // MARK: - input.*
+
+    private func inputMethod(_ request: RPCRequest) -> RPCOutbound {
+        func point(_ xKey: String, _ yKey: String) -> CGPoint? {
+            guard let x = request.double(xKey), let y = request.double(yKey) else { return nil }
+            return CGPoint(x: x, y: y)
+        }
+        do {
+            switch request.method {
+            case "input.where":
+                let here = InputController.currentLocation()
+                return .response(id: request.id, body: .object(["x": .number(here.x.rounded()),
+                                                                "y": .number(here.y.rounded())]))
+            case "input.move":
+                guard let target = point("x", "y") else { return RPCOutbound.fail(request.id, .badParams, "input.move needs x,y") }
+                try InputController.move(to: target)
+            case "input.click":
+                guard let target = point("x", "y") else { return RPCOutbound.fail(request.id, .badParams, "input.click needs x,y") }
+                try InputController.click(at: target, button: request.string("button") ?? "left",
+                                          count: request.int("count") ?? 1)
+            case "input.drag":
+                guard let start = point("x1", "y1"), let end = point("x2", "y2") else {
+                    return RPCOutbound.fail(request.id, .badParams, "input.drag needs x1,y1,x2,y2")
+                }
+                try InputController.drag(from: start, to: end, milliseconds: request.int("ms") ?? 300)
+            case "input.scroll":
+                guard let target = point("x", "y") else { return RPCOutbound.fail(request.id, .badParams, "input.scroll needs x,y") }
+                try InputController.scroll(at: target, dx: request.int("dx") ?? 0, dy: request.int("dy") ?? 0)
+            case "input.key":
+                guard let key = request.string("key"), !key.isEmpty else {
+                    return RPCOutbound.fail(request.id, .badParams, "input.key needs key")
+                }
+                let mods = request.param("mods")?.arrayValue?.compactMap { $0.stringValue } ?? []
+                try InputController.key(key, modifiers: mods)
+            case "input.type":
+                guard let text = request.string("text") else {
+                    return RPCOutbound.fail(request.id, .badParams, "input.type needs text")
+                }
+                try InputController.type(text)
+            default:
+                return RPCOutbound.fail(request.id, .badParams, "unknown method \(request.method)")
+            }
+            return .ok(id: request.id)
+        } catch {
+            return fail(request, error)
+        }
+    }
+
+    // MARK: - job.*
+
+    private func jobMethod(_ request: RPCRequest) -> RPCOutbound {
+        let jobs = JobManager.shared
+        switch request.method {
+        case "job.submit":
+            guard let cmd = request.string("cmd"), !cmd.isEmpty else {
+                return RPCOutbound.fail(request.id, .badParams, "job.submit needs cmd")
+            }
+            let timeout = min(86_400.0, max(1.0, request.double("timeout") ?? 3600))
+            do {
+                let job = try jobs.submit(cmd: cmd, cwd: request.string("cwd"), env: envDictionary(request), timeout: timeout)
+                return .response(id: request.id, body: .object(["jobId": .string(job.id)]))
+            } catch {
+                return fail(request, error)
+            }
+        case "job.status", "job.result":
+            guard let id = request.string("jobId"), !id.isEmpty else {
+                return RPCOutbound.fail(request.id, .badParams, "\(request.method) needs jobId")
+            }
+            let wait = request.method == "job.result" ? min(600.0, max(0.0, request.double("wait") ?? 0)) : 0
+            guard let status = jobs.result(id: id, wait: wait) else {
+                return RPCOutbound.fail(request.id, .enoent, "no such job: \(id)")
+            }
+            return .response(id: request.id, body: status)
+        case "job.tail":
+            guard let id = request.string("jobId"), !id.isEmpty else {
+                return RPCOutbound.fail(request.id, .badParams, "job.tail needs jobId")
+            }
+            let stream = request.string("stream") ?? "out"
+            let offset = max(0, request.int("offset") ?? 0)
+            guard let (data, next, eof) = jobs.tail(id: id, stream: stream, offset: offset, limit: Executor.maxRead) else {
+                return RPCOutbound.fail(request.id, .enoent, "no such job: \(id)")
+            }
+            return .response(id: request.id, body: .object(["data": .string(data.base64EncodedString()),
+                                                            "offset": .int(next),
+                                                            "eof": .bool(eof)]))
+        case "job.kill":
+            guard let id = request.string("jobId"), !id.isEmpty else {
+                return RPCOutbound.fail(request.id, .badParams, "job.kill needs jobId")
+            }
+            guard jobs.kill(id: id) else {
+                return RPCOutbound.fail(request.id, .enoent, "no running job: \(id)")
+            }
+            return .ok(id: request.id)
+        default:
+            return .response(id: request.id, body: .object(["jobs": .array(jobs.list())]))
+        }
+    }
+
+    // MARK: - session.*
+
+    private func sessionMethod(_ request: RPCRequest) -> RPCOutbound {
+        let sessions = SessionManager.shared
+        do {
+            switch request.method {
+            case "session.open":
+                let session = try sessions.open(cmd: request.string("cmd"), cwd: request.string("cwd"),
+                                                env: envDictionary(request))
+                return .response(id: request.id, body: .object(["sessionId": .string(session.id)]))
+            case "session.write":
+                guard let id = request.string("sessionId"), let text = request.string("data") else {
+                    return RPCOutbound.fail(request.id, .badParams, "session.write needs sessionId, data")
+                }
+                try sessions.write(id: id, text: text)
+                return .ok(id: request.id)
+            case "session.read":
+                guard let id = request.string("sessionId") else {
+                    return RPCOutbound.fail(request.id, .badParams, "session.read needs sessionId")
+                }
+                let (data, next, eof, alive) = try sessions.read(id: id, offset: max(0, request.int("offset") ?? 0),
+                                                                limit: Executor.maxRead)
+                return .response(id: request.id, body: .object(["data": .string(String(decoding: data, as: UTF8.self)),
+                                                                "offset": .int(next),
+                                                                "eof": .bool(eof),
+                                                                "alive": .bool(alive)]))
+            default:
+                guard let id = request.string("sessionId") else {
+                    return RPCOutbound.fail(request.id, .badParams, "session.close needs sessionId")
+                }
+                guard sessions.close(id: id) else {
+                    return RPCOutbound.fail(request.id, .enoent, "no such session: \(id)")
+                }
+                return .ok(id: request.id)
+            }
+        } catch {
+            return fail(request, error)
+        }
+    }
+
+    // MARK: - mcp.*
+
+    private func mcpMethod(_ request: RPCRequest) -> RPCOutbound {
+        let bridge = McpBridge.shared
+        do {
+            switch request.method {
+            case "mcp.servers":
+                return .response(id: request.id, body: .object(["servers": .array(bridge.servers())]))
+            case "mcp.open":
+                let args = request.param("args")?.arrayValue?.compactMap { $0.stringValue } ?? []
+                let session = try bridge.open(name: request.string("name"), command: request.string("command"),
+                                              args: args, env: envDictionary(request), cwd: request.string("cwd"))
+                session.lock.lock(); let tools = session.tools; session.lock.unlock()
+                return .response(id: request.id, body: .object(["sessionId": .string(session.id),
+                                                                "name": .string(session.name),
+                                                                "tools": .array(tools)]))
+            case "mcp.list":
+                guard let id = request.string("sessionId"), let session = bridge.session(id) else {
+                    return RPCOutbound.fail(request.id, .enoent, "no such MCP session")
+                }
+                session.lock.lock(); let tools = session.tools; session.lock.unlock()
+                return .response(id: request.id, body: .object(["tools": .array(tools)]))
+            case "mcp.call":
+                guard let id = request.string("sessionId"), let tool = request.string("tool") else {
+                    return RPCOutbound.fail(request.id, .badParams, "mcp.call needs sessionId, tool")
+                }
+                let timeout = min(600.0, max(5.0, request.double("timeout") ?? 120))
+                let result = try bridge.call(sessionId: id, tool: tool,
+                                             args: request.param("args") ?? .object([:]), timeout: timeout)
+                return .response(id: request.id, body: result)
+            default:
+                guard let id = request.string("sessionId"), bridge.close(sessionId: id) else {
+                    return RPCOutbound.fail(request.id, .enoent, "no such MCP session")
+                }
+                return .ok(id: request.id)
+            }
+        } catch {
+            return fail(request, error)
+        }
+    }
+
+    // MARK: - power.* / app.relaunch
+
+    private func powerMethod(_ request: RPCRequest) -> RPCOutbound {
+        Executor.caffeinateLock.lock()
+        defer { Executor.caffeinateLock.unlock() }
+        if let running = Executor.caffeinate, running.isRunning { running.terminate() }
+        Executor.caffeinate = nil
+        guard request.method == "power.assert" else { return .ok(id: request.id) }
+        let seconds = min(14_400, max(1, request.int("seconds") ?? 3600))
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/caffeinate")
+        process.arguments = ["-dims", "-t", String(seconds)]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+        } catch {
+            return RPCOutbound.fail(request.id, .eio, "cannot start caffeinate: \(error.localizedDescription)")
+        }
+        Executor.caffeinate = process
+        let until = Date().addingTimeInterval(TimeInterval(seconds)).timeIntervalSince1970 * 1000
+        return .response(id: request.id, body: .object(["until": .number(until.rounded()), "seconds": .int(seconds)]))
+    }
+
+    /// DELIVERY v1.1 项:App 自己用 `open -n` 拉起新实例后退出。中继会把老连接顶下线。
+    private func relaunch(_ request: RPCRequest) -> RPCOutbound {
+        let bundlePath = Bundle.main.bundlePath
+        guard bundlePath.hasSuffix(".app") else {
+            return RPCOutbound.fail(request.id, .eio, "not running from an .app bundle")
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            let opener = Process()
+            opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            opener.arguments = ["-n", bundlePath]
+            try? opener.run()
+            Log.shared.write("relaunch: new instance requested, quitting")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { NSApp.terminate(nil) }
+        }
+        return .ok(id: request.id)
     }
 
     // MARK: - open / clip / notify
@@ -629,7 +1025,6 @@ final class Executor {
         guard let target = request.string("target"), !target.isEmpty else {
             return RPCOutbound.fail(request.id, .badParams, "open needs target")
         }
-        // `/usr/bin/open` 对 URL 与路径都行,而且行为与用户自己在终端里敲的一样。
         let expanded = target.hasPrefix("~") ? Shell.expandPath(target) : target
         let result = Shell.run("/usr/bin/open", [expanded], timeout: 15)
         guard result.ok else {

@@ -22,6 +22,8 @@ final class RelayClient {
 
     var onStateChange: ((State) -> Void)?
     var onAgentsChanged: (() -> Void)?
+    /// SPEC §10.2:配对成功 → 主窗口切到授权页。主线程回调。
+    var onPaired: ((AuthorizedAgent) -> Void)?
 
     // MARK: - 内部
 
@@ -407,7 +409,8 @@ final class RelayClient {
         Log.shared.write("relay: paired with \(record.id) (\(name))")
         DispatchQueue.main.async { [weak self] in
             self?.onAgentsChanged?()
-            Notifier.post(title: Lf("notify.paired.title", name), body: L("notify.paired.body"))
+            self?.onPaired?(record)
+            Notifier.post(title: Lf("notify.paired.title", name), body: L("notify.paired.body.v2"))
         }
     }
 

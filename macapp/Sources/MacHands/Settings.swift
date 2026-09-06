@@ -82,6 +82,8 @@ struct Settings: Codable, Equatable {
     /// (zh/en/ja/ko/…)。改了要重启才生效——Strings 只在启动时解析一次,
     /// 不追求运行时热切换,换来的是不用给每个视图都接一根"语言变了请重画"的线。
     var language: String
+    /// SPEC §10.2:用户点过「授权并验证」的时刻(毫秒)。nil = 还没做过一次授权。
+    var authorizedAt: Double?
 
     static func makeDefault() -> Settings {
         return Settings(relayURL: Settings.defaultRelayURL,
@@ -92,12 +94,13 @@ struct Settings: Codable, Equatable {
                         license: "",
                         seenWelcome: false,
                         pinnedRelayKey: "",
-                        language: "auto")
+                        language: "auto",
+                        authorizedAt: nil)
     }
 
     init(relayURL: String, macName: String, agents: [AuthorizedAgent],
          policy: PolicyState, launchAtLogin: Bool, license: String, seenWelcome: Bool,
-         pinnedRelayKey: String, language: String) {
+         pinnedRelayKey: String, language: String, authorizedAt: Double? = nil) {
         self.relayURL = relayURL
         self.macName = macName
         self.agents = agents
@@ -107,6 +110,7 @@ struct Settings: Codable, Equatable {
         self.seenWelcome = seenWelcome
         self.pinnedRelayKey = pinnedRelayKey
         self.language = language
+        self.authorizedAt = authorizedAt
     }
 
     /// 旧版本写的文件不会有新键;缺一个键不该让整份配置读不出来。
@@ -121,6 +125,7 @@ struct Settings: Codable, Equatable {
         seenWelcome = try c.decodeIfPresent(Bool.self, forKey: .seenWelcome) ?? false
         pinnedRelayKey = try c.decodeIfPresent(String.self, forKey: .pinnedRelayKey) ?? ""
         language = try c.decodeIfPresent(String.self, forKey: .language) ?? "auto"
+        authorizedAt = try c.decodeIfPresent(Double.self, forKey: .authorizedAt)
     }
 
     static func suggestedMacName() -> String {

@@ -21,6 +21,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 启动
 
+    /// `--no-relay` 或环境变量 MACHANDS_NO_RELAY=1:只显示界面,不连中继。
+    static var relayDisabled: Bool {
+        return CommandLine.arguments.contains("--no-relay")
+            || ProcessInfo.processInfo.environment["MACHANDS_NO_RELAY"] == "1"
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Log.shared.write("MacHands starting (bundle=\(LoginItem.isBundled ? "yes" : "no"))")
         AuditLog.shared.onProblem = { message in Log.shared.write(message) }
@@ -46,6 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let relay = RelayClient(identity: identity, executor: executor, policy: policy)
         relay.onStateChange = { [weak self] _ in self?.refreshUI() }
         relay.onAgentsChanged = { [weak self] in self?.refreshUI() }
+        // SPEC §10.2:配对成功就把授权页摆到用户面前 —— 这是唯一一次需要他点的地方。
+        relay.onPaired = { [weak self] _ in self?.showMainWindow(activating: true) }
         self.relay = relay
 
         let statusItem = StatusItemController()
@@ -55,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.onOpenAudit = { AppDelegate.reveal(AuditLog.fileURL) }
         statusItem.onOpenWindow = { [weak self] in self?.showMainWindow(activating: true) }
         statusItem.onOpenSettings = { [weak self] in self?.showSettingsWindow() }
+        statusItem.onAuthorize = { [weak self] in self?.showMainWindow(activating: true) }
         statusItem.onQuit = { NSApp.terminate(nil) }
         self.statusItem = statusItem
 
@@ -73,7 +82,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        relay.start()
+        // 开发者便利(SPEC §13):`--no-relay` 或 MACHANDS_NO_RELAY=1 只起界面、不连中继,
+        // 给界面调试用的副本——否则它会用同一份身份把正式版顶下线。
+        if AppDelegate.relayDisabled {
+            Log.shared.write("relay disabled by --no-relay / MACHANDS_NO_RELAY; UI-only run")
+        } else {
+            relay.start()
+        }
 
         // 菜单里的"3 分钟前"要自己走动;顺便刷新重连倒计时。
         let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
@@ -115,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.onSetMode = { [weak self] mode in self?.setMode(mode) }
             window.onSetLaunchAtLogin = { [weak self] on in self?.setLaunchAtLogin(on) }
             window.onOpenSettings = { [weak self] in self?.showSettingsWindow() }
+            window.onAuthorize = { [weak self] mode in self?.authorize(mode) }
             mainWindow = window
         }
         mainWindow?.render(mainModel())
@@ -148,7 +164,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                        online: online,
                                                        mode: mode,
                                                        paused: paused,
-                                                       licenseLine: licenseLine())
+                                                       licenseLine: licenseLine(),
+                                                       authorizedAt: settings.authorizedAt)
         statusItem?.render()
 
         if let window = mainWindow, window.window?.isVisible == true {
@@ -166,7 +183,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                           relayURL: settings.relayURL,
                                           macName: settings.macName,
                                           macId: identity?.macId ?? "",
-                                          licenseLine: licenseLine())
+                                          licenseLine: licenseLine(),
+                                          authorizedAt: settings.authorizedAt)
     }
 
     // MARK: - 动作
@@ -204,6 +222,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setMode(_ mode: ApprovalMode) {
         policy?.mode = mode
+        refreshUI()
+    }
+
+    /// SPEC §10.2「授权并验证」:写范围、记时刻、一次性把系统权限请求弹完。
+    /// 自检本身由主窗口在后台跑并渲染(两端同一份 Verifier)。
+    private func authorize(_ mode: ApprovalMode) {
+        policy?.mode = mode
+        SettingsStore.shared.update { $0.authorizedAt = Date().timeIntervalSince1970 * 1000 }
+        Permissions.requestAll()
+        Log.shared.write("authorized once: mode=\(mode.rawValue)")
         refreshUI()
     }
 

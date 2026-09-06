@@ -23,6 +23,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         var paused: Bool = false
         /// 试用/许可证那一行;没有话说时是 nil。
         var licenseLine: String?
+        /// SPEC §10.2:做过一次授权的时刻(毫秒);nil = 还没做过。
+        var authorizedAt: Double?
     }
 
     var model = Model()
@@ -33,6 +35,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     var onOpenAudit: (() -> Void)?
     var onOpenWindow: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    var onAuthorize: (() -> Void)?
     var onQuit: (() -> Void)?
 
     private let statusItem: NSStatusItem
@@ -113,6 +116,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         let status = disabledItem(statusLine())
         menu.addItem(status)
+        if model.authorizedAt != nil {
+            menu.addItem(disabledItem(Lf("menu.authorized", StatusItemController.modeName(model.mode))))
+        }
 
         if model.agents.isEmpty {
             let copy = NSMenuItem(title: L("menu.copyForAgent"),
@@ -137,8 +143,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         let modeItem = NSMenuItem(title: L("menu.mode"), action: nil, keyEquivalent: "")
         let modeMenu = NSMenu()
-        for mode in [ApprovalMode.ask, ApprovalMode.auto] {
-            let title = mode == .ask ? L("menu.mode.ask") : L("menu.mode.auto")
+        for mode in [ApprovalMode.auto, ApprovalMode.readonly, ApprovalMode.ask] {
+            let title = StatusItemController.modeName(mode)
             let item = NSMenuItem(title: title, action: #selector(pickMode(_:)), keyEquivalent: "")
             item.target = self
             item.state = (model.mode == mode) ? .on : .off
@@ -152,6 +158,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
                                action: #selector(togglePause), keyEquivalent: "p")
         pause.target = self
         menu.addItem(pause)
+
+        // SPEC §10.2:一次授权的入口。配对后主窗口会自动弹;这里是之后再找它的地方。
+        let authorize = NSMenuItem(title: L("menu.authorize"), action: #selector(authorizePressed), keyEquivalent: "a")
+        authorize.target = self
+        menu.addItem(authorize)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -172,6 +183,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let quit = NSMenuItem(title: L("menu.quit"), action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
+
+    /// 审批模式的短名字。菜单与主窗口的「已授权 · %@」都用它,两处永远是同一个词。
+    static func modeName(_ mode: ApprovalMode) -> String {
+        switch mode {
+        case .ask: return L("menu.mode.ask")
+        case .auto: return L("menu.mode.auto")
+        case .readonly: return L("menu.mode.readonly")
+        case .deny: return L("menu.state.paused")
+        }
     }
 
     private func agentLine(_ agent: AuthorizedAgent) -> String {
@@ -213,6 +234,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     @objc private func openAudit() { onOpenAudit?() }
     @objc private func openWindow() { onOpenWindow?() }
     @objc private func openSettings() { onOpenSettings?() }
+    @objc private func authorizePressed() { onAuthorize?() }
     @objc private func quit() { onQuit?() }
 
     @objc private func pickMode(_ sender: NSMenuItem) {
