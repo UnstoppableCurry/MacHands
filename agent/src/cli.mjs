@@ -117,6 +117,21 @@ export function exitCodeFor(err) {
   return err?.exitCode ?? EXIT.FAIL
 }
 
+/// macOS 的"文件与文件夹"授权被拒时,内核给的是 EINTR 而不是 EPERM,`ls` 只会说
+/// "Interrupted system call";命令甚至可能直接卡到超时(系统在等一个用户看不见的弹窗)。
+/// 谁都会先去怀疑硬盘坏了。这里按"失败 + 碰了受保护路径"认出来,直接说破。
+const TCC_PATHS = /(~|\/Users\/[^/\s]+)\/(Downloads|Desktop|Documents|Movies|Music|Pictures)|\/Volumes\/|\/Library\/Mail|iCloud/
+const TCC_ERRORS = /Interrupted system call|Operation not permitted|信号中断|不允许的操作/
+export function tccHint(cmd, stderrText, code) {
+  if (code === 0 || code === undefined || code === null) return ''
+  const touched = TCC_PATHS.test(cmd || '')
+  const smells = TCC_ERRORS.test(stderrText || '')
+  // 124 是我们约定的超时码:碰到受保护路径又超时,基本就是在等那个看不见的弹窗。
+  if (!(smells || (code === 124 && touched))) return ''
+  if (!touched && !smells) return ''
+  return t('tccHint')
+}
+
 export function humanError(err) {
   const missing = unknownMethodOf(err)
   if (missing) return t('unknownMethod', missing, appVersionSeen || t('unknown'))
@@ -446,6 +461,7 @@ export async function cmdRun(args) {
   if (!cmd) throw new CliError('用法:machands run -- <命令>(注意 -- 后面才是要在 Mac 上跑的命令)', EXIT.FAIL)
   const { client, session } = await connect({ mac: args.flags.mac })
   const timeout = Number(args.flags.timeout) || 600
+  let seen = ''
   try {
     const res = await session.request(
       'run',
@@ -454,11 +470,13 @@ export async function cmdRun(args) {
         timeoutMs: timeout * 1000 + 130_000,
         onStream: (s) => {
           if (s.o) process.stdout.write(s.o)
-          if (s.e) process.stderr.write(s.e)
+          if (s.e) { seen += s.e; process.stderr.write(s.e) }
         },
       }
     )
     if (args.flags.json) say(JSON.stringify(res))
+    const hint = tccHint(cmd, seen, res.code)
+    if (hint) warn(hint)
     return res.code ?? EXIT.OK
   } finally {
     client.close()
