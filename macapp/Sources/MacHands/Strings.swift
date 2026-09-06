@@ -336,7 +336,64 @@ struct Strings {
         "time.seconds": ["zh": "%d 秒", "en": "%ds", "ja": "%d 秒", "ko": "%d초"],
         "time.minutes": ["zh": "%d 分", "en": "%dm", "ja": "%d 分", "ko": "%d분"],
         "time.hours": ["zh": "%d 小时", "en": "%dh", "ja": "%d 時間", "ko": "%d시간"],
-        "time.days": ["zh": "%d 天", "en": "%dd", "ja": "%d 日", "ko": "%d일"]
+        "time.days": ["zh": "%d 天", "en": "%dd", "ja": "%d 日", "ko": "%d일"],
+
+        // --- 审批卡打磨(设计定稿,ApprovalPanel.swift 专用;键名前缀 approval.)----------
+        // 两颗主按钮:"允许这一条"(实心)与"拒绝"(浅灰底)。"允许 1 小时 / 总是允许"
+        // 沿用上面 approve.hour / approve.always,只降成次要样式,文案不变。
+        "approval.allowThis": ["zh": "允许这一条", "en": "Allow this one",
+                               "ja": "この 1 件を許可", "ko": "이 명령만 허용"],
+        // 卡片不抢焦点(铁律 5),数字键要先点一下卡才生效;没焦点时把这句话说明白,
+        // 拿到焦点后才列按键。
+        "approval.focusHint": ["zh": "点一下这张卡,就能用键盘", "en": "Click this card to use the keyboard",
+                               "ja": "このカードをクリックするとキーボードで操作できます",
+                               "ko": "이 카드를 클릭하면 키보드로 조작할 수 있습니다"],
+        "approval.keysHint": ["zh": "1 允许这一条 · 4 / Esc 拒绝 · 2 允许 1 小时 · 3 总是允许",
+                              "en": "1 allow · 4 / Esc refuse · 2 for an hour · 3 always",
+                              "ja": "1 許可 · 4 / Esc 拒否 · 2 1 時間許可 · 3 常に許可",
+                              "ko": "1 허용 · 4 / Esc 거부 · 2 1시간 허용 · 3 항상 허용"],
+        // 收尾态:点了允许/拒绝之后卡片停 1.6 秒,对勾/叉号 + 这一行,再收起。
+        "approval.doneAllowed": ["zh": "已允许,命令正在执行", "en": "Allowed — the command is running",
+                                 "ja": "許可しました。コマンドを実行中です", "ko": "허용했습니다. 명령을 실행 중입니다"],
+        "approval.doneAllowedHour": ["zh": "已允许,接下来 1 小时不再问", "en": "Allowed — no more asking for an hour",
+                                     "ja": "許可しました。これから 1 時間は確認しません",
+                                     "ko": "허용했습니다. 앞으로 1시간 동안 묻지 않습니다"],
+        "approval.doneAllowedAlways": ["zh": "已允许,这条以后不再问", "en": "Allowed — this one is never asked again",
+                                       "ja": "許可しました。このコマンドは今後確認しません",
+                                       "ko": "허용했습니다. 이 명령은 다시 묻지 않습니다"],
+        "approval.doneDenied": ["zh": "已拒绝,命令没有执行", "en": "Refused — nothing was run",
+                                "ja": "拒否しました。コマンドは実行されません", "ko": "거부했습니다. 명령은 실행되지 않았습니다"],
+        "approval.doneTimeout": ["zh": "没人回应,已自动拒绝,命令没有执行",
+                                 "en": "No answer — refused automatically, nothing was run",
+                                 "ja": "応答がなかったため自動的に拒否しました。コマンドは実行されません",
+                                 "ko": "응답이 없어 자동으로 거부했습니다. 명령은 실행되지 않았습니다"],
+        // 风险胶囊(只读 = 绿 accentA,会写盘 = 橙 warning,删除 = 红 danger)+ 一句说明。
+        // 说明按"档位 × 方法"挑,挑不到用档位的通用那句(ApprovalRisk.swift 判档)。
+        "approval.risk.read": ["zh": "只读", "en": "Read-only", "ja": "読み取りのみ", "ko": "읽기 전용"],
+        "approval.risk.write": ["zh": "会写盘", "en": "Writes files", "ja": "書き込みあり", "ko": "파일 쓰기"],
+        "approval.risk.delete": ["zh": "删除", "en": "Deletes", "ja": "削除", "ko": "삭제"],
+        "approval.risk.explain.read": ["zh": "只看不改,不会动你的文件。", "en": "Looks only — nothing on your Mac changes.",
+                                       "ja": "見るだけで、ファイルは変更しません。", "ko": "보기만 하며, 파일을 바꾸지 않습니다."],
+        "approval.risk.explain.read.fs": ["zh": "只读取这个路径,不会改它。", "en": "Reads this path only — it is not changed.",
+                                          "ja": "このパスを読み取るだけで、変更はしません。", "ko": "이 경로를 읽기만 하고 바꾸지 않습니다."],
+        "approval.risk.explain.read.screen": ["zh": "只截一张屏幕图,不改任何东西。", "en": "Takes a screenshot — nothing changes.",
+                                              "ja": "画面を撮るだけで、何も変更しません。", "ko": "화면을 찍기만 하고 아무것도 바꾸지 않습니다."],
+        "approval.risk.explain.read.clip": ["zh": "只读取剪贴板里的文字。", "en": "Reads what is on the clipboard.",
+                                            "ja": "クリップボードの内容を読み取るだけです。", "ko": "클립보드의 내용을 읽기만 합니다."],
+        "approval.risk.explain.read.sys": ["zh": "只读取这台 Mac 的基本信息。", "en": "Reads basic facts about this Mac.",
+                                           "ja": "この Mac の基本情報を読み取るだけです。", "ko": "이 Mac의 기본 정보만 읽습니다."],
+        "approval.risk.explain.write": ["zh": "可能新建或修改文件,请看清命令。", "en": "May create or change files — read it first.",
+                                        "ja": "ファイルを作成・変更する可能性があります。内容を確認してください。",
+                                        "ko": "파일을 만들거나 바꿀 수 있습니다. 명령을 확인하세요."],
+        "approval.risk.explain.write.fs": ["zh": "会写入这个路径,已有内容会被覆盖。", "en": "Writes this path — existing content is replaced.",
+                                           "ja": "このパスに書き込みます。既存の内容は上書きされます。",
+                                           "ko": "이 경로에 씁니다. 기존 내용은 덮어씁니다."],
+        "approval.risk.explain.write.open": ["zh": "会打开一个程序、文件或网址。", "en": "Opens an app, a file or a link.",
+                                             "ja": "アプリ、ファイル、または URL を開きます。", "ko": "앱, 파일 또는 링크를 엽니다."],
+        "approval.risk.explain.write.clip": ["zh": "会替换你剪贴板里的内容。", "en": "Replaces what is on your clipboard.",
+                                             "ja": "クリップボードの内容を置き換えます。", "ko": "클립보드의 내용을 바꿉니다."],
+        "approval.risk.explain.delete": ["zh": "会删除文件,删掉就找不回来了。", "en": "Deletes files — gone is gone.",
+                                         "ja": "ファイルを削除します。元に戻せません。", "ko": "파일을 삭제합니다. 되돌릴 수 없습니다."]
     ]
 }
 

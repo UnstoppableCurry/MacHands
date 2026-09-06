@@ -72,7 +72,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         applyLicense()
-        Notifier.requestAuthorization()
+        var askNotifications = true
+        #if DEBUG
+        // 预览副本别去要通知权限:换了 bundle id 的副本会在屏幕上弹一个系统授权框。
+        if DebugPreview.options.isActive { askNotifications = false }
+        #endif
+        if askNotifications { Notifier.requestAuthorization() }
         installSignalHandlers()
 
         // 开机自启的默认值是"开",但只在第一次尝试注册,失败也不吵。
@@ -84,7 +89,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 开发者便利(SPEC §13):`--no-relay` 或 MACHANDS_NO_RELAY=1 只起界面、不连中继,
         // 给界面调试用的副本——否则它会用同一份身份把正式版顶下线。
-        if AppDelegate.relayDisabled {
+        var uiOnly = AppDelegate.relayDisabled
+        #if DEBUG
+        // 预览假审批卡的副本一律不连中继,免得忘了带 --no-relay 把正式版顶下线。
+        if DebugPreview.options.isActive { uiOnly = true }
+        #endif
+        if uiOnly {
             Log.shared.write("relay disabled by --no-relay / MACHANDS_NO_RELAY; UI-only run")
         } else {
             relay.start()
@@ -103,6 +113,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showMainWindow(activating: true)
         }
         refreshUI()
+
+        #if DEBUG
+        DebugPreview.launch()       // 只有带 --preview-approval 启动时才做事(见 DebugPreview.swift)
+        #endif
     }
 
     func applicationWillTerminate(_ notification: Notification) {

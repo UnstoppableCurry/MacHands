@@ -11,6 +11,9 @@ enum Theme {
     static let accentA = NSColor(srgbRed: 0.31, green: 0.88, blue: 0.63, alpha: 1)   // 官网 --accent
     static let accentB = NSColor(srgbRed: 0.37, green: 0.72, blue: 1.00, alpha: 1)   // 官网 --accent2
     static let danger  = NSColor(srgbRed: 0.94, green: 0.36, blue: 0.36, alpha: 1)
+    /// 审批卡上"会写盘"那档的橙。语义色,不是第三个强调色:绿(accentA)= 只读,
+    /// 橙 = 会写盘,红(danger)= 删除。用系统橙,深浅外观各有一版。
+    static let warning = NSColor.systemOrange
 
     static let cardRadius: CGFloat = 14
     static let buttonRadius: CGFloat = 10
@@ -106,11 +109,63 @@ final class CardView: NSView {
     }
 }
 
-/// 三种风格的按钮:填色(主操作)、淡色描边(次操作)、危险(拒绝类)。
-/// 全部自绘,不混用系统 .rounded 贝塞尔——混着用反而不统一。
+/// 胶囊标签:一小块淡色底 + 同色字,用来标风险档位("只读 / 会写盘 / 删除")。
+/// 圆角永远是高度的一半,所以叫胶囊。
+final class PillLabel: NSView {
+
+    private let label = NSTextField(labelWithString: "")
+    private var tint: NSColor = .secondaryLabelColor
+
+    init() {
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.cornerCurve = .continuous
+        label.font = NSFont.systemFont(ofSize: 10.5, weight: .semibold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(label)
+        translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            label.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            label.topAnchor.constraint(equalTo: topAnchor, constant: 2.5),
+            label.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2.5)
+        ])
+        setContentHuggingPriority(.required, for: .horizontal)
+        setContentCompressionResistancePriority(.required, for: .horizontal)
+        applyColors()
+    }
+    required init?(coder: NSCoder) { fatalError("code-only") }
+
+    func set(text: String, tint: NSColor) {
+        label.stringValue = text
+        self.tint = tint
+        applyColors()
+    }
+
+    override func layout() {
+        super.layout()
+        layer?.cornerRadius = bounds.height / 2
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyColors()
+    }
+
+    private func applyColors() {
+        label.textColor = tint
+        layer?.backgroundColor = tint.withAlphaComponent(0.16).cgColor
+        layer?.borderWidth = 1
+        layer?.borderColor = tint.withAlphaComponent(0.4).cgColor
+    }
+}
+
+/// 几种风格的按钮:填色(主操作)、淡色描边(次操作)、浅灰底(主操作旁边那个
+/// "另一条路")、纯文字(第三级,链接一样)。全部自绘,不混用系统 .rounded
+/// 贝塞尔——混着用反而不统一。按下去整体压暗一点,让人知道点到了。
 final class StyledButton: NSButton {
 
-    enum Kind { case filled(NSColor), tinted(NSColor), outline }
+    enum Kind { case filled(NSColor), tinted(NSColor), outline, soft, text(NSColor) }
 
     var kind: Kind = .outline { didSet { applyStyle() } }
     private var titleSize: CGFloat = 13
@@ -153,6 +208,15 @@ final class StyledButton: NSButton {
         didSet { applyStyle() }
     }
 
+    override func highlight(_ flag: Bool) {
+        super.highlight(flag)
+        alphaValue = flag ? 0.72 : 1.0
+    }
+
+    override var isEnabled: Bool {
+        didSet { alphaValue = isEnabled ? 1.0 : 0.45 }
+    }
+
     private func applyStyle() {
         let fg: NSColor
         switch kind {
@@ -170,6 +234,16 @@ final class StyledButton: NSButton {
             layer?.borderWidth = 1
             layer?.borderColor = NSColor.separatorColor.cgColor
             fg = .labelColor
+        case .soft:
+            // 浅灰底:用 labelColor 的 10% —— 深色外观里是淡白,浅色外观里是淡黑,
+            // 都比 controlColor 更"像一块底"而不是一个输入框。
+            layer?.backgroundColor = NSColor.labelColor.withAlphaComponent(0.10).cgColor
+            layer?.borderWidth = 0
+            fg = .labelColor
+        case .text(let color):
+            layer?.backgroundColor = NSColor.clear.cgColor
+            layer?.borderWidth = 0
+            fg = color
         }
         attributedTitle = Theme.attributed(title, color: fg, size: titleSize, weight: titleWeight)
     }
