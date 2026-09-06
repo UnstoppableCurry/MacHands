@@ -334,7 +334,7 @@ App 端:`Verifier`(本机直接调 Executor 同一套实现)。Agent 端:`machan
 ```
 rm -rf /        rm -rf ~        rm -rf /*       diskutil erase      diskutil eraseDisk
 mkfs            dd if=          sudo            csrutil             launchctl bootout system
-security delete-keychain        tccutil reset   killall MacHands    pkill -f MacHands
+security delete-keychain        tccutil reset All   killall MacHands    pkill -f MacHands
 osascript -e 'tell application "System Events" to keystroke        ← 键鼠走 input.*,不走 osascript
 ```
 

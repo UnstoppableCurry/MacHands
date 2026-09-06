@@ -117,3 +117,57 @@ cd ~/machands/macapp
    `xcrun notarytool store-credentials machands-notary --apple-id <你的 Apple ID 邮箱> --team-id <上一步看到的 TEAMID> --password <App 专用密码>`
 4. **npm 账号**:如果你还没有,`npm adduser` 注册一个(建议用户名 `machands` 或你自己的);做完告诉我账号名,我来发布 `agent/` 那个包。
 5. 做完 2、3 后回我一句,我会自动跑 `release.sh` 出正式 DMG,放到官网 `/dl/` 下,把首页"Get MacHands"从收邮件切换成真下载,再帮你在 Lemon Squeezy 或 Paddle 建店铺收款(那两家的开店本身需要你自己的身份/银行信息,我没法代劳,但页面文案、产品配置我可以先写好)。
+
+---
+
+# 0.2.0 交付说明(2026-09-06):一次授权 + 授权后自检 + 开发者便利
+
+用户的原话是三句:授权只做一次、要有引导;授权后要验证;"开发方便的标准你来定义"。合同在 SPEC.md §10–§14。
+
+## 做了什么(改前 → 改后)
+
+| 项 | 0.1.0 | 0.2.0 |
+|---|---|---|
+| 审批模式 | ask / auto | ask / auto / **readonly** / deny;黑名单 15 条,含 rootish 规则(`rm -rf /` 拦、`rm -rf /tmp/x` 放) |
+| 授权流程 | 每条命令弹卡 | 配对成功自动弹**授权页**:选一次范围 → 三项系统权限各带「打开设置」→「授权并验证」→ 7 项自检结果 |
+| RPC | 15 个 | **43 个**:sys.perms/which、policy.check、fs.get 目录(tar.gz)、screen.window/record、input.*×7、job.*×6、session.*×4、mcp.*×5、power.*×2、app.relaunch、verify.run;`run` 超时杀整棵进程树回 124 |
+| CLI 命令 | 12 | **26**(use/verify/perms/which/check/policy/job/session/input/record/window-shot/mcp/power/relaunch;get 支持目录) |
+| MCP 工具 | 8 | **31**;mac_get 按块循环到 eof,大二进制落文件不塞 base64 |
+| 测试 | 38 | **58**(node --test test,58/58,28.7 s);Swift 侧新增 PolicyV2Tests 15 项 |
+| 开发者便利 | — | `--no-relay` / `MACHANDS_NO_RELAY=1` 只起界面不连中继(界面调试副本用,免得同身份顶掉正式版) |
+
+## 证据(工具 + 输入 + 数值 + 阈值)
+
+- 构建(mini,macOS 26.2,Apple M4,Swift 6.2.4 命令行工具):`swift build -c release` 43.95 s 全量 / 6.33 s 增量,error 0(阈值 0)。
+- 签名:`build-app.sh --sign "Apple Development: wang tianxin (4CBL3R2MCH)"`,`codesign --verify --strict` 通过,Team 3PW7WV39F5(与 0.1.0 相同)。
+- 安装:`/Applications/MacHands.app` 0.2.0(build 20),老版保留为 `MacHands.app.old`(回滚边界);重启后配对保持,`machands macs` 两台在线。
+- 装机冒烟(`node agent/bin/machands.mjs … --mac "牛马的Mac mini"`):
+  - `check rm -rf /` → deny;`check ls -la ~/Desktop` → allow
+  - `which godot blender ffmpeg` → 两个路径 + blender 缺失
+  - `job submit 'echo out-1; sleep 1; echo err-1 >&2; exit 3'` → `job result` code=3,1051 ms;`job tail` out-1 / `--err` err-1
+  - `session open` → `write 'echo hi-from-zsh $((6*7))\n'` → `read` 含 `hi-from-zsh 42`
+  - `mcp servers` → 列出 mini 上 6 个已配置 MCP 服务器(只有名字与命令,不含 env)
+  - `power on --seconds 60` / `power off` 正常
+  - `run --timeout 3 -- 'sleep 30 & sleep 30'` → 3 s 后远端无残留 `sleep 30`(进程树杀干净)
+  - `get <目录>` → tar.gz 7501 字节自动解包
+  - `verify` → run ✓ fs ✓ job ✓ mcp ✓;screen ✗ input ✗ notify ✗(三项都是系统权限,提示里给了要点的路径)
+- Node:`node --test test` 58/58;`npm pack --dry-run` 9 个文件 39.2 kB,version 0.2.0。
+
+## 升级说明(以后每次发版都会遇到)
+
+1. **macOS 26 在 App 更新后重置「屏幕录制」授权**(TCC 按代码签名匹配,二进制一换就掉)。升级后用户要重新勾一次;辅助功能与通知一般保留。发版说明里必须写这一句。
+2. **同一 agent 身份的两条连接互相顶下线**(中继 `server.mjs` 对同 id 新连接发 BUSY 并关旧连接)。两个会话共用一台 Mac 时会频繁看到"和中继的连接断了"。下一版中继允许同 id 多连接,按连接路由回包。
+3. `run` 的黑名单是对**整条命令**判定,命中则整条一个都不执行;CLI 提示已写明。黑名单只拦不可逆/越权动作:`tccutil reset All` 拦,定向的 `tccutil reset <服务> <bundle id>` 放。
+
+## 你要做的事(只有你能做)
+
+1. mini:系统设置 → 隐私与安全性 → **屏幕录制** 勾上 MacHands;**辅助功能** 勾上 MacHands;**通知** 允许 MacHands。
+2. 菜单栏那只手 → **授权与验证…** → 选「开发者」→ **授权并验证** → 应见 7 项全 ✓(也可以在这台服务器上跑 `machands verify`)。
+3. `cd agent && npm publish`(需要你的 OTP)。
+
+## 诚实残差
+
+- Swift 单元测试(PolicyV2Tests 15 项)在 mini 上**没跑**:命令行工具没有 XCTest。需要装了 Xcode 的机器,或改成 swift-testing。
+- 界面截图与"真点击"交互测试要等屏幕录制 + 辅助功能勾上之后补;`--no-relay` 调试副本自己也截不了自己(候选:把自家窗口渲染成 PNG 的调试开关,注:画不出系统材质)。
+- Air 尚未升级到 0.2.0:等 mini 的交互验证过了再推(同一份 .app 拷过去即可)。
+- `perms` / `which` 恒 exit 0(信息类命令);`session read` 会把 zsh 提示符一起读回来。

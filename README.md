@@ -11,9 +11,11 @@ MacHands 让它们用你自己的 Mac 干这些活,不用租 Mac,不用开远程
 2. 点 **复制给 agent**。
 3. 把复制到的文字贴给你的云端 agent。它会自己执行里面那一行,几秒后菜单栏显示"已连接"。
 
-之后 agent 每次要在 Mac 上执行命令、写文件、打开网址,你的 Mac 右上角都会弹一张卡:
-**允许一次 / 允许 1 小时 / 总是允许这条 / 拒绝**(数字键 1-4)。
-不想被问就在菜单里切到"自动",危险命令黑名单仍然生效。随时可以"暂停"。
+配对成功后 MacHands 会弹出**授权页**,只需要做一次:选范围(**开发者** 全部允许、**只读** 只能看、**逐条审批** 每条都问)→
+三项系统权限(通知 / 屏幕录制 / 辅助功能)各有「打开设置」→ 点 **授权并验证**,7 项自检全绿就完了。
+之后不再打扰;危险命令黑名单(`rm -rf /`、`sudo`、`diskutil erase`…)在任何模式下都生效,随时可以"暂停"。
+"逐条审批"模式下每条命令弹一张卡:**允许一次 / 允许 1 小时 / 总是允许这条 / 拒绝**(数字键 1-4)。
+注意:macOS 在 App **更新后会重置「屏幕录制」授权**,升级后重新勾一次即可。
 
 ## 它保证什么
 
@@ -39,6 +41,8 @@ MacHands 让它们用你自己的 Mac 干这些活,不用租 Mac,不用开远程
 node --test relay/test agent/test        # Linux/Mac 都行,约 12 秒
 cd macapp && swift build && swift test   # 需要 Mac + Xcode 命令行工具
 cd macapp && ./scripts/build-app.sh      # 产出 MacHands.app
+open dist/MacHands.app --args --no-relay # 只起界面、不连中继(界面调试副本;或 MACHANDS_NO_RELAY=1)
+machands verify                          # 装机后自检:run/fs/screen/input/notify/job/mcp 七项
 cd macapp && ./scripts/release.sh        # Developer ID 签名 + 公证 + DMG
 ```
 

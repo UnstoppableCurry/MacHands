@@ -80,7 +80,7 @@ public final class PolicyEngine {
         "csrutil",
         "launchctl bootout system",
         "security delete-keychain",
-        "tccutil reset",
+        "tccutil reset All",   // 定向的 tccutil reset <服务> <bundle id> 可逆,放行
         "killall MacHands",
         "pkill -f MacHands",
         "osascript -e 'tell application \"System Events\" to keystroke"
