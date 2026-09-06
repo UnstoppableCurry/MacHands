@@ -498,7 +498,7 @@ final class Executor {
             defer { try? fm.removeItem(at: temporary) }
             let parent = (path as NSString).deletingLastPathComponent
             let name = (path as NSString).lastPathComponent
-            let result = Shell.run("/usr/bin/tar", ["--no-mac-metadata", "--no-xattrs", "czf", temporary.path, "-C", parent, name], timeout: 900)
+            let result = Shell.run("/usr/bin/tar", ["-czf", temporary.path, "--no-mac-metadata", "--no-xattrs", "-C", parent, name], timeout: 900)
             guard result.ok else {
                 return RPCOutbound.fail(request.id, .eio, "tar failed: \(result.complaint)")
             }
