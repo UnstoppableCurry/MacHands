@@ -356,12 +356,34 @@ final class Updater {
         Log.shared.write("updated to \(release.version) in place at \(bundleURL.path); relaunching")
 
         // 8. 重启。延后一拍,让这条 RPC 的响应先发出去。
+        //
+        // 这里**先退再起**,不是先起再退。原先用 `open -n` 先拉一个新实例再 terminate,
+        // 真机上的结果是:磁盘换成了新版,跑着的还是旧进程(新实例没活下来,旧的也没退),
+        // 用户看到"已更新"却还在用旧版。同一个 bundle id 有两个实例同时活着,本来就会
+        // 互相抢中继身份、在 TCC 里撞条目 —— 今天已经吃过这个亏。
+        //
+        // 改法:先派一个脱离的看门脚本,它盯着自己这个 PID,等我们真的退干净了再 open。
+        // 顺带把旧 PID 与新实例的启动都写进日志,出问题一眼能定位先后。
+        let myPid = ProcessInfo.processInfo.processIdentifier
+        let logPath = Log.shared.fileURL.path
+        let script = """
+        while kill -0 \(myPid) 2>/dev/null; do sleep 0.2; done
+        printf '%s relaunch: old pid \(myPid) gone, opening %s\\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '\(bundleURL.path)' >> '\(logPath)'
+        /usr/bin/open -a '\(bundleURL.path)'
+        """
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            let opener = Process()
-            opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-            opener.arguments = ["-n", bundleURL.path]
-            try? opener.run()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { NSApp.terminate(nil) }
+            let watcher = Process()
+            watcher.executableURL = URL(fileURLWithPath: "/bin/sh")
+            watcher.arguments = ["-c", script]
+            watcher.standardOutput = FileHandle.nullDevice
+            watcher.standardError = FileHandle.nullDevice
+            do {
+                try watcher.run()
+            } catch {
+                Log.shared.write("relaunch watcher failed: \(error.localizedDescription)")
+            }
+            Log.shared.write("relaunch: quitting old pid \(myPid)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { NSApp.terminate(nil) }
         }
         return nil
     }
