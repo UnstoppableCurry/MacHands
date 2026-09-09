@@ -148,6 +148,33 @@ Cursor:       Settings → MCP → Add: npx -y machands mcp
 
 **退出码**:0 成功;`run` / `job result` 原样返回 Mac 上命令的退出码(超时 124);被拒绝 77(含只读模式下的写操作、`check` 的 deny),审批超时 78,Mac 离线 69,还没配对 66。
 
+## 自建中继
+
+默认走我们托管的中继。不想走的话,在**你自己的 VPS** 上起一个——中继就在这个包里,
+不用再装别的东西:
+
+```bash
+npm i -g machands
+machands relay start --port 8443
+```
+
+起来之后它会把要填进 Mac 的那个地址直接打出来,照抄到 MacHands → 设置 → 中继地址就行。
+有域名和证书就走 wss:
+
+```bash
+machands relay start --tls-cert /etc/…/fullchain.pem --tls-key /etc/…/privkey.pem --port 443
+```
+
+数据默认在 `~/.machands/relay-data`。里面的 `relay.key` 是这台中继的身份,
+**删了等于换了一台中继**,所有已经配过对的 Mac 都会连不上——记得备份。
+
+> **最容易卡住的一步是云厂商的安全组。** 阿里云 / AWS / Oracle 默认全拦入站,
+> 只改机器上的 firewall 不够,要去控制台放行。在**别的机器**上
+> `curl -s http://<公网IP>:8443/health` 通了,才算真的通了。
+
+中继只转发密文:agent 与 Mac 之间每一帧都是 X25519 + ChaCha20-Poly1305 端到端加密的,
+中继没有密钥,看不见你的命令,也看不见文件内容。
+
 ## MCP 工具
 
 `machands mcp` 暴露这些工具:`mac_info`、`mac_run`、`mac_put`、`mac_get`(循环分块到 eof,目录返回解包后的清单)、`mac_ls`、
@@ -192,7 +219,7 @@ node --test test       # 需要仓库里的 relay/ 一起在
 `test/fake-mac.mjs` 是一个能在 Linux 上跑的假 Mac,手工玩也行:
 
 ```bash
-node ../relay/server.mjs &                       # 起一个本地中继
+node bin/machands.mjs relay start --port 8443 &   # 起一个本地中继
 node test/fake-mac.mjs --relay 127.0.0.1:8443    # 打印一段真配对码
 MACHANDS_HOME=/tmp/a node bin/machands.mjs pair "MH1.…"
 MACHANDS_HOME=/tmp/a node bin/machands.mjs run -- uname -a

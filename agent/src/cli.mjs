@@ -9,7 +9,7 @@ import { RpcSession, RpcError, attach } from './rpc.mjs'
 import { t } from './i18n.mjs'
 import { b64u, unb64u, genEd25519, genX25519, newId, parsePairingCode } from './crypto.mjs'
 
-export const VERSION = '0.3.0'
+export const VERSION = '0.3.1'
 export const EXIT = { OK: 0, NOT_PAIRED: 66, OFFLINE: 69, LICENSE: 75, DENIED: 77, TIMEOUT: 78, FAIL: 1 }
 const CHUNK = 384 * 1024 // 上传分块(base64 后仍远小于 1 MiB)
 const GET_CHUNK = 512 * 1024 // ≤ 768 KiB/次
