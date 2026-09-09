@@ -168,17 +168,45 @@ if [ "$BUNDLE_ID" != "app.machands.MacHands" ]; then
   info "bundle id:$BUNDLE_ID(不是正式版的 id,TCC / 通知 / 登录项都按这个单独记)"
 fi
 
-if [ "$DO_BUILD" = 1 ]; then
-    if [ "$UNIVERSAL" = 1 ]; then step "swift build -c $CONFIG (universal)"; else step "swift build -c $CONFIG"; fi
+# 一次编两个架构(`swift build --arch arm64 --arch x86_64`)要 xcbuild,
+# 而 xcbuild 只在**完整 Xcode** 里有。只装了命令行工具的机器会报:
+#   error: xcbuild executable at '…/XCBuild.framework/…' does not exist
+# 所以没有 Xcode 时不走那条路:分别编两次单架构(CLT 就能编),再 lipo 合成胖二进制。
+# 出来的东西和 xcbuild 那条路一样,mini 这种只有 CLT 的机器也能出通用包。
+XCBUILD=/Library/Developer/SharedFrameworks/XCBuild.framework/Versions/A/Support/xcbuild
+LIPO_BIN=""
+if [ "$UNIVERSAL" = 1 ] && [ "$DO_BUILD" = 1 ] && [ ! -x "$XCBUILD" ]; then
+  step "swift build -c $CONFIG(本机没有 Xcode:分架构编 + lipo 合并)"
+  ARCH_BINS=()
+  for A in arm64 x86_64; do
+    ONE=(-c "$CONFIG" --product "$PRODUCT" --arch "$A")
+    [ -n "$SCRATCH" ] && ONE+=(--scratch-path "${SCRATCH}-$A")
+    info "编 $A"
+    ( cd "$APP_DIR" && swift build "${ONE[@]}" ) \
+      || die 1 "$A 这一架构没编过。" "往上翻编译错误;BUILD.md 里列了常见的几种"
+    ONE_DIR=$( cd "$APP_DIR" && swift build "${ONE[@]}" --show-bin-path 2>/dev/null ) \
+      || die 1 "问不出 $A 的产物路径"
+    ARCH_BINS+=("$ONE_DIR/$PRODUCT")
+  done
+  LIPO_BIN="$(mktemp -d)/$PRODUCT"
+  lipo -create "${ARCH_BINS[@]}" -output "$LIPO_BIN" \
+    || die 1 "lipo 合并失败。" "两个架构的产物都在吗:${ARCH_BINS[*]}"
+  info "已合并:$(lipo -archs "$LIPO_BIN")"
+elif [ "$DO_BUILD" = 1 ]; then
+  if [ "$UNIVERSAL" = 1 ]; then step "swift build -c $CONFIG (universal)"; else step "swift build -c $CONFIG"; fi
   ( cd "$APP_DIR" && swift build "${BUILD_FLAGS[@]}" ) \
     || die 1 "swift build 失败。" "往上翻编译错误;BUILD.md 里列了常见的几种"
 else
   info "跳过 swift build(--no-build)"
 fi
 
-BIN_DIR=$( cd "$APP_DIR" && swift build "${BUILD_FLAGS[@]}" --show-bin-path 2>/dev/null ) \
-  || die 1 "问不出 SwiftPM 把产物放哪儿了。" "去掉 --no-build 再试"
-BIN="$BIN_DIR/$PRODUCT"
+if [ -n "$LIPO_BIN" ]; then
+  BIN="$LIPO_BIN"
+else
+  BIN_DIR=$( cd "$APP_DIR" && swift build "${BUILD_FLAGS[@]}" --show-bin-path 2>/dev/null ) \
+    || die 1 "问不出 SwiftPM 把产物放哪儿了。" "去掉 --no-build 再试"
+  BIN="$BIN_DIR/$PRODUCT"
+fi
 [ -x "$BIN" ] || die 1 "$BIN 这里没有可执行文件" \
   "确认 Package.swift 里声明了 .executable(name: \"$PRODUCT\", ...)"
 
