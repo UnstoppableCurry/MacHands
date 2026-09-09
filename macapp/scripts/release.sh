@@ -96,7 +96,7 @@ while [ "$#" -gt 0 ]; do
     --notes-en)          [ "${2:-}" ] || die 2 "--notes-en 要一段文字"; NOTES_EN="$2"; shift 2 ;;
     --out)               [ "${2:-}" ] || die 2 "--out 要一个目录"; OUT_DIR="$2"; shift 2 ;;
     --allow-dirty)       ALLOW_DIRTY=1; shift ;;
-    --bundle-id)         die 2 "release.sh 不接受 --bundle-id:正式发布包永远是 $EXPECT_BUNDLE_ID。" \
+    --bundle-id)         die 2 "release.sh 不接受 --bundle-id:正式发布包永远是 ${EXPECT_BUNDLE_ID}。" \
                              "要做开发副本用 ./scripts/build-app.sh --bundle-id app.machands.MacHands.dev,别走发布流程" ;;
     --skip-notarize)     SKIP_NOTARIZE=1; shift ;;
     -h|--help)           usage; exit 0 ;;
@@ -120,15 +120,15 @@ case "$SIGN_ID" in
   "Developer ID Application:"*) : ;;
   *)
     if [ "$SKIP_NOTARIZE" = 1 ]; then
-      warn "「$SIGN_ID」不是 Developer ID Application —— 内部测试可以,别拿去发布。"
+      warn "「${SIGN_ID}」不是 Developer ID Application —— 内部测试可以,别拿去发布。"
     else
-      die 2 "「$SIGN_ID」不是 Developer ID Application 证书。" \
+      die 2 "「${SIGN_ID}」不是 Developer ID Application 证书。" \
         "Apple Distribution 与 3rd Party Mac Developer 是上架 App Store 用的,签出来的包在别人机器上打不开、而且每次升级都会掉系统权限。去 developer.apple.com → Certificates 新建一张 Developer ID Application,步骤见 docs/RELEASE.md"
     fi ;;
 esac
 
 security find-identity -v -p codesigning 2>/dev/null | grep -qF "$SIGN_ID" \
-  || die 4 "钥匙串里找不到「$SIGN_ID」。" \
+  || die 4 "钥匙串里找不到「${SIGN_ID}」。" \
      "security find-identity -v -p codesigning 会列出所有可用的;名字要一字不差(含括号里的 team id)"
 ok "证书在钥匙串里"
 
@@ -137,7 +137,7 @@ if [ "$SKIP_NOTARIZE" = 0 ]; then
   [ -n "$KEYCHAIN_PROFILE" ] || die 2 "缺 --keychain-profile。" \
     "先建一次:xcrun notarytool store-credentials machands-notary --apple-id you@example.com --team-id TEAMID --password <App 专用密码>"
   if ! xcrun notarytool history --keychain-profile "$KEYCHAIN_PROFILE" >/dev/null 2>&1; then
-    die 5 "钥匙串里没有名为「$KEYCHAIN_PROFILE」的公证凭据(或者它已失效)。" \
+    die 5 "钥匙串里没有名为「${KEYCHAIN_PROFILE}」的公证凭据(或者它已失效)。" \
       "xcrun notarytool store-credentials $KEYCHAIN_PROFILE --apple-id you@example.com --team-id TEAMID --password <App 专用密码>"
   fi
   ok "公证凭据可用($KEYCHAIN_PROFILE)"
@@ -152,7 +152,7 @@ if [ -z "$VERSION" ]; then
   [ -n "$FILE_VERSION" ] || die 2 "macapp/VERSION 是空的,也没给 --version。"
   VERSION="$FILE_VERSION"
 elif [ -n "$FILE_VERSION" ] && [ "$VERSION" != "$FILE_VERSION" ]; then
-  die 2 "--version 是 $VERSION,但 macapp/VERSION 里写的是 $FILE_VERSION。" \
+  die 2 "--version 是 $VERSION,但 macapp/VERSION 里写的是 ${FILE_VERSION}。" \
     "两处必须一致,否则 appcast 里的版本号和 App 自报的版本号对不上,更新会反复触发。先改 VERSION 文件"
 fi
 case "$VERSION" in *[!0-9.]*|""|.*|*.) die 2 "版本号要长得像 1.2.3(拿到的是 '$VERSION')" ;; esac
@@ -202,11 +202,11 @@ APP_BUNDLE="$OUT_DIR/$APP_NAME.app"
 ACTUAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" \
             "$APP_BUNDLE/Contents/Info.plist" 2>/dev/null || true)
 [ "$ACTUAL_ID" = "$EXPECT_BUNDLE_ID" ] || die 8 \
-  "打出来的 Info.plist 里 CFBundleIdentifier 是「${ACTUAL_ID:-空}」,应该是 $EXPECT_BUNDLE_ID。" \
+  "打出来的 Info.plist 里 CFBundleIdentifier 是「${ACTUAL_ID:-空}」,应该是 ${EXPECT_BUNDLE_ID}。" \
   "正式发布包的 bundle id 不可改:改了就是另一个 App,用户已授权的屏幕录制/辅助功能全部作废,而且会和已装的那份在系统里同名打架"
 SIGNED_ID=$(codesign -dv "$APP_BUNDLE" 2>&1 | sed -n 's/^Identifier=//p')
 [ "$SIGNED_ID" = "$EXPECT_BUNDLE_ID" ] || die 8 \
-  "签名里的 Identifier 是「${SIGNED_ID:-空}」,应该是 $EXPECT_BUNDLE_ID。" \
+  "签名里的 Identifier 是「${SIGNED_ID:-空}」,应该是 ${EXPECT_BUNDLE_ID}。" \
   "codesign 的 --identifier 和 Info.plist 必须一致,否则 TCC 认的是签名里那个"
 ok "bundle id $EXPECT_BUNDLE_ID(plist 与签名一致)"
 
