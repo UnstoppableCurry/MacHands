@@ -33,12 +33,27 @@ export function verifyLicense(line, edPub, now = Date.now()) {
   if (!verifyPayload(edPub, payload, parts[2])) {
     return { status: BAD, reason: '签名验不过:要么不是我们签的,要么被改过' }
   }
-  if (payload.exp) {
-    const exp = Date.parse(payload.exp.length <= 10 ? payload.exp + 'T23:59:59Z' : payload.exp)
-    if (Number.isNaN(exp)) return { status: BAD, reason: 'exp 不是合法日期' }
-    if (exp < now) return { status: EXPIRED, payload, reason: `已于 ${payload.exp} 过期` }
+  if (payload.exp !== null && payload.exp !== undefined) {
+    // 正规形态是 Unix 秒(数字)—— App 端 `LicensePayload.exp` 是 `Double?`,只认数字。
+    // 字符串形态是 2026-09-09 之前的签发工具留下的,App 根本验不过;这里仍然认出来,
+    // 只为让"我这张老证怎么在 Mac 上显示无效"这个问题有个明确答案,而不是报格式错。
+    if (typeof payload.exp === 'string') {
+      return { status: BAD, payload, reason: 'exp 是字符串,App 只认 Unix 秒 —— 这张证要用新版签发工具重签' }
+    }
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) {
+      return { status: BAD, reason: 'exp 不是合法的 Unix 秒' }
+    }
+    if (payload.exp * 1000 < now) {
+      return { status: EXPIRED, payload, reason: `已于 ${expText(payload.exp)} 过期` }
+    }
   }
   return { status: OK, payload }
+}
+
+/// Unix 秒 → 人看得懂的 UTC 日期。
+export function expText(exp) {
+  if (exp === null || exp === undefined) return '永久'
+  return new Date(exp * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
 }
 
 const USAGE = `验一张 MacHands 许可证
@@ -62,7 +77,7 @@ export function main(argv = process.argv.slice(2)) {
   }
   const r = verifyLicense(line, pub)
   if (r.status === OK) {
-    console.log(`有效  邮箱 ${r.payload.email}  席位 ${r.payload.seats}  到期 ${r.payload.exp ?? '永久'}`)
+    console.log(`有效  邮箱 ${r.payload.email}  席位 ${r.payload.seats}  到期 ${expText(r.payload.exp)}`)
   } else if (r.status === EXPIRED) {
     console.log(`已过期  邮箱 ${r.payload.email}  ${r.reason}`)
   } else {

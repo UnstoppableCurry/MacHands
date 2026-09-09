@@ -30,9 +30,31 @@ export function parseArgs(argv) {
   return o
 }
 
+/// `--exp 2027-01-01` 这种人写的日期转成 Unix 秒。
+///
+/// **必须是数字。** App 端 `LicensePayload.exp` 声明的是 `Double?`,给它一个字符串
+/// `JSONDecoder` 直接抛错,整张证被判成 malformed —— 不是"到期失效",是第一天就用不了。
+/// 这个坑 2026-09-09 实测踩到过:带 `--exp` 签出来的证在 Mac 上一律显示无效。
+///
+/// 光秃秃的 `YYYY-MM-DD` 按那一天的 23:59:59 UTC 算,这样"到 1 月 1 日到期"符合人的直觉。
+export function expToEpochSeconds(exp) {
+  if (exp === null || exp === undefined || exp === '' || exp === 'none') return null
+  if (typeof exp === 'number') {
+    if (!Number.isFinite(exp)) throw new Error('--exp 不是合法日期')
+    return Math.floor(exp)
+  }
+  const text = String(exp).trim()
+  const ms = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(text) ? `${text}T23:59:59Z` : text)
+  if (Number.isNaN(ms)) throw new Error(`--exp 不是合法日期:${text}`)
+  return Math.floor(ms / 1000)
+}
+
 export function makeLicense(edPriv, { email, exp = null, seats = 1 }) {
   if (!email) throw new Error('要有 --email')
-  const payload = { email: String(email), exp: exp ?? null, seats: Number(seats) || 1 }
+  const seconds = expToEpochSeconds(exp)
+  // 再挡一道:任何非数字非 null 的 exp 都不许签出去,免得以后又悄悄回到字符串。
+  if (seconds !== null && !Number.isInteger(seconds)) throw new Error('exp 必须是整数秒或 null')
+  const payload = { email: String(email), exp: seconds, seats: Number(seats) || 1 }
   const sig = signPayload(edPriv, payload)
   return `MHL1.${b64u(Buffer.from(canonicalJSON(payload), 'utf8'))}.${sig}`
 }
@@ -91,6 +113,8 @@ export function main(argv = process.argv.slice(2)) {
   const keyFile = JSON.parse(readFileSync(resolve(String(args.key)), 'utf8'))
   const exp = !args.exp || args.exp === 'none' ? null : String(args.exp)
   try {
+    // makeLicense 里会转成 Unix 秒;这里先转一次只为把日期写错的情况提前报出来。
+    expToEpochSeconds(exp)
     const line = makeLicense(unb64u(keyFile.ed25519_priv), { email: args.email, exp, seats: args.seats })
     console.log(line)
     return 0

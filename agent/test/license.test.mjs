@@ -14,7 +14,34 @@ test('许可证:签出来能验回去', () => {
   assert.match(line, /^MHL1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
   const r = verifyLicense(line, kp.pub)
   assert.equal(r.status, OK)
-  assert.deepEqual(r.payload, { email: 'kai@example.com', exp: '2099-01-01', seats: 3 })
+  // exp 是 Unix 秒,不是日期字符串 —— 见下面那条回归测试
+  assert.deepEqual(r.payload, { email: 'kai@example.com', exp: Date.parse('2099-01-01T23:59:59Z') / 1000, seats: 3 })
+})
+
+// 2026-09-09 的回归:签发端写 "2027-01-01" 字符串,而 App 端 LicensePayload.exp 是
+// Double?,JSONDecoder 解不动 → 整张证判 malformed → 用户第一天就看到"许可证无效"。
+// 限期证是内测防泄露的唯一手段,这条断言守住它。
+test('许可证:exp 必须是 Unix 秒,App 端才解得动', () => {
+  const kp = genEd25519()
+  const line = makeLicense(kp.priv, { email: 'a@b.c', exp: '2027-01-01', seats: 1 })
+  const payload = JSON.parse(Buffer.from(line.split('.')[1], 'base64url').toString('utf8'))
+  assert.equal(typeof payload.exp, 'number', 'exp 是字符串的话 Swift 端会判 malformed')
+  assert.ok(Number.isInteger(payload.exp), 'exp 必须是整数秒,不能有小数')
+  assert.equal(payload.exp, Date.parse('2027-01-01T23:59:59Z') / 1000)
+})
+
+// Swift 的 CanonicalJSON 把整数按整数打印(见 CanonicalJSON.canonicalNumber),
+// 两端逐字节一致签名才验得过。这条钉死实际字节,防止哪天变成 1798761599.0。
+test('许可证:被签的 canonical JSON 与 Swift 端逐字节一致', () => {
+  const kp = genEd25519()
+  const line = makeLicense(kp.priv, { email: 'a@b.c', exp: '2027-01-01', seats: 1 })
+  const bytes = Buffer.from(line.split('.')[1], 'base64url').toString('utf8')
+  assert.equal(bytes, '{"email":"a@b.c","exp":1798847999,"seats":1}')
+})
+
+test('许可证:日期写错要当场报错,不许签出一张废证', () => {
+  const kp = genEd25519()
+  assert.throws(() => makeLicense(kp.priv, { email: 'a@b.c', exp: '不是日期' }), /不是合法日期/)
 })
 
 test('许可证:永久证 exp 是 null', () => {
@@ -30,6 +57,15 @@ test('许可证:过期的报过期,不是报假', () => {
   const r = verifyLicense(makeLicense(kp.priv, { email: 'a@b.c', exp: '2020-01-01' }), kp.pub)
   assert.equal(r.status, EXPIRED)
   assert.match(r.reason, /过期/)
+})
+
+test('许可证:90 天内测证,今天有效、91 天后过期', () => {
+  const kp = genEd25519()
+  const day = 86400_000
+  const exp = new Date(Date.now() + 90 * day).toISOString().slice(0, 10)
+  const line = makeLicense(kp.priv, { email: 'beta@example.com', exp, seats: 1 })
+  assert.equal(verifyLicense(line, kp.pub).status, OK)
+  assert.equal(verifyLicense(line, kp.pub, Date.now() + 91 * day).status, EXPIRED)
 })
 
 test('许可证:换把公钥、改一个字都验不过', () => {
