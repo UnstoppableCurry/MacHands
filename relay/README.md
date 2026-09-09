@@ -11,24 +11,41 @@
 外加 `data/relay.key`(它自己的 Ed25519 身份,第一次启动自动生成,权限 0600)。
 配对码里带着中继公钥,App 和 CLI 首次连接就把它 pin 住,对不上直接断开。
 
-## 自建,五条命令
+## 自建,两条命令
+
+中继就在 `machands` 这个 npm 包里,不用拿仓库权限:
 
 ```bash
-git clone <仓库> machands && cd machands/relay
-npm install                       # 只有一个依赖:ws
-cp config.example.json config.json && $EDITOR config.json   # 改端口就行
-sudo sh install.sh                # 建系统用户、装到 /opt/machands、写 systemd、开机自启
+npm i -g machands
+machands relay start --port 8443
+```
+
+起来之后它会把**要填进 Mac 的那个地址**直接打出来,照抄就行。
+`relayId` 也会打出来,那是这台中继的公钥。
+
+有域名和证书就走 wss:
+
+```bash
+machands relay start --tls-cert /etc/…/fullchain.pem --tls-key /etc/…/privkey.pem --port 443
+```
+
+数据默认在 `~/.machands/relay-data`,`--data` 可以改。
+
+> **最容易卡住的一步:云厂商的安全组。** 阿里云 / AWS / Oracle 默认全拦入站,
+> 只改机器上的 firewall 不够,得去控制台放行你用的那个端口。
+> 在**别的机器**上 `curl -s http://<公网IP>:8443/health` 通了才算真的通了。
+
+### 想要开机自启的 systemd 服务
+
+从仓库里跑(需要仓库权限):
+
+```bash
+sudo sh relay/install.sh          # 建系统用户、装到 /opt/machands、写 systemd
 curl -s http://127.0.0.1:8443/health
 ```
 
-最后一条应当回一段 JSON,里面的 `relayId` 就是这台中继的公钥。
 `install.sh` 可以重复跑,已经存在的用户、配置文件都不会被覆盖。
-
-不想装成服务,直接跑也行:
-
-```bash
-node server.mjs config.json
-```
+只有 npm 包的话,用 pm2 或自己写一份 systemd unit 指向 `machands relay start` 也一样。
 
 ## 配置
 

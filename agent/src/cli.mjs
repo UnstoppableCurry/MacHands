@@ -1455,6 +1455,79 @@ export async function cmdShow(args) {
   }
 }
 
+// ---------- relay(自建中继) ----------
+//
+// SPEC §1 一开始就写了中继「我们托管;可自建」。但自建这条路以前是断的:
+// relay/server.mjs 只在私有仓库里,README 第一句是 `git clone <仓库>`,
+// 内测用户照着做第一步就卡死。
+//
+// 所以实现挪进了 src/relay-server.mjs —— 和 CLI 同一个 npm 包。用户
+// `npm i -g machands` 之后 VPS 上直接就有中继,不用拿到仓库权限。
+export async function cmdRelay(args) {
+  const sub = args._.shift() || 'start'
+  if (sub !== 'start') {
+    say('用法:machands relay start [--port 8443] [--host 0.0.0.0] [--data <目录>]')
+    say('     有域名和证书就加 --tls-cert <路径> --tls-key <路径>,端口改 443')
+    return EXIT.FAIL
+  }
+
+  const { createRelay } = await import('./relay-server.mjs')
+  const port = Number(args.flags.port ?? 8443)
+  const host = String(args.flags.host ?? '0.0.0.0')
+  const dataDir = args.flags.data ? String(args.flags.data) : join(homeDir(), 'relay-data')
+  const cert = args.flags['tls-cert']
+  const key = args.flags['tls-key']
+  if (Boolean(cert && cert !== true) !== Boolean(key && key !== true)) {
+    say('--tls-cert 和 --tls-key 要一起给')
+    return EXIT.FAIL
+  }
+  const tls = cert && cert !== true ? { cert: String(cert), key: String(key) } : null
+
+  let relay
+  try {
+    relay = createRelay({ host, port, dataDir, tls })
+    await relay.listen()
+  } catch (err) {
+    if (err && err.code === 'EADDRINUSE') {
+      say(`${port} 端口已经被占了。换一个:machands relay start --port 8444`)
+    } else if (err && err.code === 'EACCES') {
+      say(`没权限监听 ${port} 端口。1024 以下的端口要 root,或者换个大端口。`)
+    } else {
+      say(`中继起不来:${err && err.message ? err.message : err}`)
+    }
+    return EXIT.FAIL
+  }
+
+  const scheme = tls ? 'wss' : 'ws'
+  const a = relay.address()
+  say(`中继已启动  ${scheme}://${host}:${a.port}`)
+  say(`relayId     ${relay.relayId}`)
+  say(`数据目录    ${relay.cfg.dataDir}`)
+  say('')
+  // 光说"起来了"没用 —— 用户下一步要在 Mac 上填一个地址,这里直接给他要填的东西。
+  say('下一步:Mac 上打开 MacHands → 设置 → 中继地址,填这个(IP 换成这台机器的公网 IP):')
+  say(`    ${scheme}://<公网IP>:${a.port}`)
+  say('    不知道公网 IP 就跑:curl -s ifconfig.me')
+  say('')
+  say(`在别的机器上确认外面连得通:curl -s http://<公网IP>:${a.port}/health`)
+  say('    连不上多半是云厂商的安全组没放行 —— 阿里云 / AWS / Oracle 默认全拦入站,')
+  say(`    要去控制台加 ${a.port} 端口的入站规则,只改机器上的 firewall 不够。`)
+  say('')
+  say('这个进程要一直开着。要常驻用 systemd 或 pm2,临时顶一下可以 nohup。')
+
+  await new Promise((done) => {
+    const bye = async () => {
+      say('')
+      say('中继已停止。配对关系都在数据目录里,下次起来还认。')
+      await relay.close()
+      done()
+    }
+    process.on('SIGINT', bye)
+    process.on('SIGTERM', bye)
+  })
+  return EXIT.OK
+}
+
 const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
 
   连接
@@ -1506,6 +1579,10 @@ const USAGE = `machands ${VERSION} · 给你的云端 agent 一双 Mac 上的手
   machands mcp open <名字> | open --command CMD [--args '["…"]']   借 Mac 的手起一个,打印 sid
   machands mcp list <sid> | call <sid> <工具> ['{…}'] | close <sid>
 
+  自建中继(不想走官方中继就在自己的 VPS 上跑这个)
+  machands relay start [--port 8443] [--data <目录>]   起一个自己的中继,打印要填进 Mac 的地址
+  machands relay start --tls-cert <路径> --tls-key <路径> --port 443   有域名和证书就走 wss
+
   公共参数:--mac <名字>  --json  --help  --version
   --why "<一句人话>"   会弹审批卡的命令(run/put/get/shot/input/job submit/session/open/clip set/mcp call)都接;
                       Mac 上的人看到的是这句话,不是命令本身。
@@ -1556,6 +1633,8 @@ export async function main(argv = process.argv.slice(2)) {
     update: cmdUpdate,
     selfshot: cmdSelfshot,
     show: cmdShow,
+    // 自建中继:这台机器自己当中继跑,不连别人的
+    relay: cmdRelay,
   }
   if (cmd === 'mcp') {
     // 不带子命令 = 自己当 MCP 服务器;带子命令 = 去调 Mac 上的 MCP 服务器

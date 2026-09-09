@@ -43,7 +43,7 @@ fi
 mkdir -p "$PREFIX/relay" "$PREFIX/agent/src" "$PREFIX/relay/data"
 cp -f "$SRC/relay/server.mjs" "$SRC/relay/package.json" "$PREFIX/relay/"
 cp -f "$SRC/relay/config.example.json" "$PREFIX/relay/"
-cp -f "$SRC/agent/src/crypto.mjs" "$PREFIX/agent/src/"
+cp -f "$SRC/agent/src/crypto.mjs" "$SRC/agent/src/relay-server.mjs" "$PREFIX/agent/src/"
 
 # 3. 依赖:只有一个 ws
 if [ -d "$SRC/relay/node_modules/ws" ]; then
