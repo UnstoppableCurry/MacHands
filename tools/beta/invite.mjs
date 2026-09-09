@@ -26,7 +26,7 @@ const WEBROOT = process.env.MACHANDS_WEBROOT || '/var/www/machands'
 const LEDGER = process.env.MACHANDS_BETA_LEDGER || '/opt/machands/beta/invites.jsonl'
 const SITE = process.env.MACHANDS_SITE || 'https://134.199.230.126.nip.io'
 // 内测发的包。要跟着版本走,别写死在别处。
-const ASSET = process.env.MACHANDS_BETA_ASSET || 'MacHands-0.3.1.zip'
+const ASSET = process.env.MACHANDS_BETA_ASSET || 'MacHands-0.3.2.zip'
 
 function parseArgs(argv) {
   const out = { _: [] }

@@ -26,7 +26,7 @@ final class Updater {
     /// 发布公钥(base64url、Ed25519 raw)。占位值 = 还没接发布流程,
     /// 这时一切更新都会在验签这一步失败,**这是故意的**:宁可不更新,
     /// 也不要装一个没验过签的包。
-    static let releasePublicKey = "WqKIYUVbJCuwbMN3CEYXVBm6HIk71m86oThMyuT0v2A"
+    static let releasePublicKey = "jZA5x7RX6h7llvv3xp7h0pydiB7aLuAgx_a6GSl5904"
 
     /// 启动后多久做第一次检查。让开机那阵子的 CPU 先给别人。
     static let firstCheckDelay: TimeInterval = 30
