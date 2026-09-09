@@ -159,6 +159,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.onSetLaunchAtLogin = { [weak self] on in self?.setLaunchAtLogin(on) }
             window.onOpenSettings = { [weak self] in self?.showSettingsWindow() }
             window.onAuthorize = { [weak self] mode in self?.authorize(mode) }
+            // 引导卡里填完中继地址点「连接」。走的是和设置窗口同一条路:
+            // 存进 settings → 清掉旧的 pin(换中继就是换信任对象)→ 立刻重连。
+            window.onSetRelay = { [weak self] url in
+                SettingsStore.shared.update {
+                    $0.relayURL = url
+                    $0.pinnedRelayKey = ""
+                }
+                self?.relay?.reconnectNow()
+                self?.refreshUI()
+            }
             mainWindow = window
         }
         mainWindow?.render(mainModel())

@@ -97,6 +97,61 @@ struct Strings {
                           "ja": "この Mac をエージェントに渡す", "ko": "이 Mac을 에이전트에게 넘겨주세요"],
         "main.copy": ["zh": "复制给 agent", "en": "Copy for your agent",
                       "ja": "エージェント用にコピー", "ko": "에이전트용으로 복사"],
+
+        // --- 自建中继引导(0.3.3) -------------------------------------------
+        // 内测版没有默认中继:用户必须先把自己的那台跑起来。
+        // 这几条是主窗口上那张引导卡,顺序即步骤。
+        "setup.title": ["zh": "先设置你自己的中继(三步)", "en": "Set up your own relay (3 steps)",
+                        "ja": "自分のリレーを用意する(3 ステップ)", "ko": "내 릴레이 설정하기 (3단계)"],
+        "setup.why": [
+            "zh": "你的 Mac 在路由器后面,外面连不进来。中继是一台你自己的公网服务器,Mac 和 agent 都主动连上它,由它在中间转发。内容是端到端加密的,中继看不见。",
+            "en": "Your Mac sits behind a router, so nothing outside can dial in. The relay is a public server you own: both your Mac and your agent connect out to it and it passes messages between them. Everything is end-to-end encrypted — the relay cannot read it.",
+            "ja": "あなたの Mac はルーターの内側にあり、外部から接続できません。リレーはあなた自身の公開サーバーで、Mac とエージェントの双方がそこへ接続し、中継します。内容はエンドツーエンドで暗号化され、リレーからは読めません。",
+            "ko": "당신의 Mac은 라우터 뒤에 있어 외부에서 접속할 수 없습니다. 릴레이는 당신 소유의 공개 서버로, Mac과 에이전트가 각자 접속해 메시지를 전달받습니다. 내용은 종단간 암호화되어 릴레이는 읽을 수 없습니다."],
+        "setup.step1": ["zh": "① 准备一台公网服务器(VPS)", "en": "① Get a server with a public IP (VPS)",
+                        "ja": "① パブリック IP を持つサーバー(VPS)を用意", "ko": "① 공인 IP 서버(VPS) 준비"],
+        "setup.step1Hint": [
+            "zh": "下面的命令要在那台服务器上跑,不是在这台 Mac 上。",
+            "en": "The command below runs on that server — not on this Mac.",
+            "ja": "下のコマンドはそのサーバー上で実行します。この Mac ではありません。",
+            "ko": "아래 명령은 그 서버에서 실행합니다. 이 Mac이 아닙니다."],
+        "setup.step2": ["zh": "② 在服务器上执行这一行", "en": "② Run this on the server",
+                        "ja": "② サーバーでこの 1 行を実行", "ko": "② 서버에서 이 한 줄 실행"],
+        "setup.copyCmd": ["zh": "复制命令", "en": "Copy command",
+                          "ja": "コマンドをコピー", "ko": "명령 복사"],
+        "setup.cmdCopied": ["zh": "已复制,去服务器上粘贴执行。", "en": "Copied — paste and run it on your server.",
+                            "ja": "コピーしました。サーバーで貼り付けて実行してください。",
+                            "ko": "복사했습니다. 서버에서 붙여넣어 실행하세요."],
+        "setup.step2Hint": [
+            "zh": "多数云厂商默认拦掉所有入站端口。跑完要去控制台放行 8443,否则外面连不进来。",
+            "en": "Most cloud providers block all inbound ports by default. Open 8443 in their console, or nothing can reach it.",
+            "ja": "多くのクラウドは既定ですべての受信ポートを塞いでいます。コンソールで 8443 を開放しないと外部から到達できません。",
+            "ko": "대부분의 클라우드는 기본적으로 모든 인바운드 포트를 막습니다. 콘솔에서 8443을 열지 않으면 외부에서 연결할 수 없습니다."],
+        "setup.step3": ["zh": "③ 把它打印出来的地址填进来", "en": "③ Paste the address it printed",
+                        "ja": "③ 表示されたアドレスを入力", "ko": "③ 출력된 주소를 입력"],
+        "setup.connect": ["zh": "连接", "en": "Connect", "ja": "接続", "ko": "연결"],
+        "setup.badURL": [
+            "zh": "地址要以 ws:// 或 wss:// 开头,像 ws://1.2.3.4:8443",
+            "en": "The address must start with ws:// or wss://, e.g. ws://1.2.3.4:8443",
+            "ja": "アドレスは ws:// または wss:// で始まる必要があります(例:ws://1.2.3.4:8443)",
+            "ko": "주소는 ws:// 또는 wss:// 로 시작해야 합니다. 예: ws://1.2.3.4:8443"],
+        "setup.connecting": ["zh": "正在连接你的中继…", "en": "Connecting to your relay…",
+                             "ja": "リレーに接続中…", "ko": "릴레이에 연결 중…"],
+        "setup.failed": [
+            "zh": "连不上。多半是安全组没放行 8443 —— 在别的机器上 curl 一下 /health 能通才算真的通了。",
+            "en": "Cannot reach it. Usually the firewall still blocks 8443 — curl /health from another machine to be sure.",
+            "ja": "接続できません。多くの場合 8443 が塞がれたままです。別のマシンから /health を curl して確認してください。",
+            "ko": "연결할 수 없습니다. 보통 8443이 아직 막혀 있습니다. 다른 컴퓨터에서 /health를 curl로 확인하세요."],
+        "setup.done": [
+            "zh": "中继连上了。下一步:点上面那颗按钮,把配对码贴给你的 agent。",
+            "en": "Relay connected. Next: press the button above and paste the code to your agent.",
+            "ja": "リレーに接続しました。次は上のボタンを押し、ペアリングコードをエージェントに貼り付けてください。",
+            "ko": "릴레이에 연결되었습니다. 다음: 위 버튼을 눌러 페어링 코드를 에이전트에 붙여넣으세요."],
+        "setup.needRelay": [
+            "zh": "还没有中继。先按下面三步把你自己的那台跑起来。",
+            "en": "No relay yet. Follow the three steps below to bring up your own.",
+            "ja": "リレーがまだありません。下の 3 ステップで自分のリレーを起動してください。",
+            "ko": "아직 릴레이가 없습니다. 아래 3단계로 직접 실행하세요."],
         "main.copied": [
             "zh": "已复制。贴给你的 agent,让它执行那一行。",
             "en": "Copied. Paste it to your agent and let it run that line.",

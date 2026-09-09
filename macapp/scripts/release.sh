@@ -265,6 +265,45 @@ else
     *) die 6 "spctl 不放行,这个包在别人机器上会被拦。" \
          "常见原因:证书不是 Developer ID、公证没成功、票据没钉上。上面几行有具体理由" ;;
   esac
+
+  # ========================================================================= #
+  # 两个产物,给两种"用户":
+  #   zip —— 给 App 的自动更新器。它下载后要算哈希、验签、解包、原子替换,
+  #          全程无人值守;DMG 还得先挂载再卸载,多好几个失败点。
+  #   dmg —— 给人。打开就是"App 图标 + 应用程序文件夹 + 一个箭头",
+  #          这是 Mac 用户的肌肉记忆,而且**它会把人引导到 /Applications**。
+  #
+  # 最后这点不是审美:§15.0 铁律 B 要求一台 Mac 上只有一份正式 App,
+  # 而 mini 上真出过 5 份同 bundle id 拷贝互抢中继身份的事故(见 DELIVERY)。
+  # 那些散落的拷贝就是 zip 解出来直接在「下载」里双击跑起来的。箭头正是防这个。
+  step "打 DMG(给人下载用)"
+  DMG="$OUT_DIR/$APP_NAME-$VERSION.dmg"
+  DMG_STAGE=$(mktemp -d)/dmg
+  mkdir -p "$DMG_STAGE"
+  # 装进去的是**已经钉好票据**的那份 .app,不是签名后原始的那份
+  cp -R "$APP_BUNDLE" "$DMG_STAGE/" || die 1 "拷 .app 进暂存目录失败"
+  ln -s /Applications "$DMG_STAGE/Applications"
+  rm -f "$DMG"
+  hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGE" \
+                 -ov -format UDZO -quiet "$DMG" \
+    || die 1 "hdiutil 打 DMG 失败"
+  rm -rf "$DMG_STAGE"
+  # DMG 本身也要签名 + 公证,否则用户双击挂载时 Gatekeeper 仍会拦
+  codesign --force --timestamp --sign "$SIGN_ID" "$DMG" \
+    || die 4 "DMG 签名失败"
+  info "交 DMG 公证(第二次往返,苹果那边一般几分钟)"
+  if ! xcrun notarytool submit "$DMG" --keychain-profile "$KEYCHAIN_PROFILE" --wait; then
+    die 5 "苹果拒绝了这个 DMG。" \
+      "看完整报告:xcrun notarytool log <submission-id> --keychain-profile $KEYCHAIN_PROFILE"
+  fi
+  xcrun stapler staple "$DMG" || die 5 "票据钉不上 DMG。"
+  xcrun stapler validate "$DMG" >/dev/null 2>&1 || die 5 "DMG 票据校验不过。"
+  DMG_SPCTL=$(spctl -a -vv -t open --context context:primary-signature "$DMG" 2>&1 || true)
+  printf '%s\n' "$DMG_SPCTL" | sed 's/^/    /'
+  case "$DMG_SPCTL" in
+    *accepted*) ok "$DMG  ($(wc -c < "$DMG" | tr -d ' ') 字节),spctl accepted" ;;
+    *) die 6 "DMG 过不了 Gatekeeper。" "上面几行有理由" ;;
+  esac
 fi
 
 # =========================================================================== #
@@ -279,8 +318,9 @@ APPCAST_ARGS=(--zip "$ZIP" --version "$VERSION" --build "$BUILD_NUM"
 
 # =========================================================================== #
 HOST_CLEAN="${HOST%/}"
-printf '\n%s发布物(两个文件,传到官网):%s\n' "$B" "$Z"
-printf '  %-40s → %s/downloads/%s\n' "$ZIP" "$HOST_CLEAN" "$APP_NAME-$VERSION.zip"
+printf '\n%s发布物(传到官网):%s\n' "$B" "$Z"
+printf '  %-40s → %s/downloads/%s   (给人下载)\n' "${DMG:-（这次没打）}" "$HOST_CLEAN" "$APP_NAME-$VERSION.dmg"
+printf '  %-40s → %s/downloads/%s   (给自动更新器)\n' "$ZIP" "$HOST_CLEAN" "$APP_NAME-$VERSION.zip"
 printf '  %-40s → %s/appcast.json\n' "$APPCAST" "$HOST_CLEAN"
 if command -v shasum >/dev/null 2>&1; then
   printf '\n  SHA256: %s\n' "$(shasum -a 256 "$ZIP" | awk '{print $1}')"

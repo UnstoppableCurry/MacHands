@@ -26,8 +26,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     var onSetMode: ((ApprovalMode) -> Void)?
     var onSetLaunchAtLogin: ((Bool) -> Void)?
     var onOpenSettings: (() -> Void)?
+    /// 引导卡里填完中继地址点「连接」。参数已经过 ws:// / wss:// 校验。
+    var onSetRelay: ((String) -> Void)?
     /// 「授权并验证」:参数是用户选的范围。自检由本窗口自己在后台跑并渲染。
     var onAuthorize: ((ApprovalMode) -> Void)?
+
+    /// 引导第二步让用户去服务器上跑的那一行。放这儿是为了只有一处真源:
+    /// 界面上显示的、复制按钮复制的、文档里写的,必须是同一条。
+    static let relayCommand = "npm i -g machands && machands relay start --port 8443"
 
     private static let contentWidth: CGFloat = 460
     private static let bodyWidth: CGFloat = contentWidth - 48
@@ -84,6 +90,25 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private let launchRow = NSStackView()
     private let launchLabel = NSTextField(labelWithString: "")
     private let launchSwitch = NSSwitch()
+
+    // --- 自建中继引导卡(0.3.3)---------------------------------------------
+    // 内测版没有默认中继,用户装完第一件事就是把自己那台跑起来。
+    // 这张卡是主窗口在「还没连上中继」时的全部内容:三步,每步一句话,
+    // 命令给一颗复制按钮 —— 让人去别处翻文档,一半人就在这儿掉队了。
+    private let setupCard = CardView()
+    private let setupBox = NSStackView()
+    private let setupTitle = NSTextField(labelWithString: "")
+    private let setupWhy = NSTextField(wrappingLabelWithString: "")
+    private let step1 = NSTextField(labelWithString: "")
+    private let step1Hint = NSTextField(wrappingLabelWithString: "")
+    private let step2 = NSTextField(labelWithString: "")
+    private let cmdField = NSTextField(wrappingLabelWithString: "")
+    private let copyCmdButton = StyledButton(title: "", kind: .outline, size: 11.5, weight: .medium)
+    private let step2Hint = NSTextField(wrappingLabelWithString: "")
+    private let step3 = NSTextField(labelWithString: "")
+    private let relayField = NSTextField()
+    private let connectButton = StyledButton(title: "", kind: .filled(Theme.accentA), size: 12.5)
+    private let setupStatus = NSTextField(wrappingLabelWithString: "")
 
     private let detailsToggle = NSButton()
     private let detailsCard = CardView()
@@ -203,6 +228,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         ])
         pausedBanner.isHidden = true
 
+        // --- 还没连上中继:引导卡 --------------------------------------------------
+        buildSetupCard(inner: MainWindowController.innerWidth)
+
         // --- 连上之后:授权页 -----------------------------------------------------
         buildAuthCard(inner: MainWindowController.innerWidth)
 
@@ -265,7 +293,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         root.translatesAutoresizingMaskIntoConstraints = false
         // 显式标注 [NSView]:元素类型不齐(NSStackView / NSButton / NSTextField /
         // NSGridView / CardView),别让类型检查器自己去猜公共父类。
-        let stacked: [NSView] = [header, pausedBanner, copyButton, copyStatus, waitingRow, authCard,
+        let stacked: [NSView] = [header, pausedBanner, setupCard, copyButton, copyStatus, waitingRow, authCard,
                                  detailsHeader, detailsCard, footer]
         for view in stacked {
             root.addArrangedSubview(view)
@@ -286,6 +314,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             headline.widthAnchor.constraint(equalToConstant: bodyWidth - 54),
             lead.widthAnchor.constraint(equalToConstant: bodyWidth - 54),
             pausedBanner.widthAnchor.constraint(equalToConstant: bodyWidth),
+            setupCard.widthAnchor.constraint(equalToConstant: bodyWidth),
             copyButton.widthAnchor.constraint(equalToConstant: bodyWidth),
             copyButton.heightAnchor.constraint(equalToConstant: 40),
             copyStatus.widthAnchor.constraint(equalToConstant: bodyWidth),
@@ -301,6 +330,111 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     /// SPEC §10.2 的授权页,从上到下:范围三选一 → 三项系统权限 → 授权并验证 →
     /// 自检结果 → 已授权时刻 → 开机自启。
+    /// 引导卡。三步各一行标题 + 一句解释;命令给复制按钮,地址给输入框。
+    private func buildSetupCard(inner: CGFloat) {
+        setupTitle.font = NSFont.systemFont(ofSize: 13.5, weight: .semibold)
+        setupTitle.stringValue = L("setup.title")
+
+        for (label, key, size) in [(setupWhy, "setup.why", 11.5),
+                                   (step1Hint, "setup.step1Hint", 11.5),
+                                   (step2Hint, "setup.step2Hint", 11.5)] as [(NSTextField, String, CGFloat)] {
+            label.font = NSFont.systemFont(ofSize: size)
+            label.textColor = NSColor.secondaryLabelColor
+            label.stringValue = L(key)
+            label.preferredMaxLayoutWidth = inner
+            label.maximumNumberOfLines = 5
+        }
+        for (label, key) in [(step1, "setup.step1"), (step2, "setup.step2"), (step3, "setup.step3")] {
+            label.font = NSFont.systemFont(ofSize: 12.5, weight: .medium)
+            label.stringValue = L(key)
+        }
+
+        // 命令本身:等宽、可选中。就算复制按钮出了问题,人也能自己划走。
+        cmdField.font = NSFont.monospacedSystemFont(ofSize: 11.5, weight: .regular)
+        cmdField.stringValue = MainWindowController.relayCommand
+        cmdField.isSelectable = true
+        cmdField.drawsBackground = true
+        cmdField.backgroundColor = NSColor.textBackgroundColor
+        cmdField.preferredMaxLayoutWidth = inner - 16
+        cmdField.maximumNumberOfLines = 3
+        cmdField.lineBreakMode = .byWordWrapping
+
+        copyCmdButton.title = L("setup.copyCmd")
+        copyCmdButton.target = self
+        copyCmdButton.action = #selector(copyCommandPressed)
+
+        relayField.placeholderString = "ws://1.2.3.4:8443"
+        relayField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        relayField.target = self
+        relayField.action = #selector(connectPressed)   // 回车等于点「连接」
+
+        connectButton.title = L("setup.connect")
+        connectButton.target = self
+        connectButton.action = #selector(connectPressed)
+
+        setupStatus.font = NSFont.systemFont(ofSize: 11.5)
+        setupStatus.textColor = NSColor.secondaryLabelColor
+        setupStatus.preferredMaxLayoutWidth = inner
+        setupStatus.maximumNumberOfLines = 4
+        setupStatus.stringValue = ""
+
+        let cmdRow = NSStackView(views: [cmdField, copyCmdButton])
+        cmdRow.orientation = .horizontal
+        cmdRow.alignment = .top
+        cmdRow.spacing = 8
+
+        let addrRow = NSStackView(views: [relayField, connectButton])
+        addrRow.orientation = .horizontal
+        addrRow.alignment = .centerY
+        addrRow.spacing = 8
+
+        setupBox.orientation = .vertical
+        setupBox.alignment = .leading
+        setupBox.spacing = 6
+        for v in [setupTitle, setupWhy, step1, step1Hint,
+                  step2, cmdRow, step2Hint, step3, addrRow, setupStatus] as [NSView] {
+            setupBox.addArrangedSubview(v)
+        }
+        setupBox.setCustomSpacing(12, after: setupWhy)
+        setupBox.setCustomSpacing(10, after: step1Hint)
+        setupBox.setCustomSpacing(10, after: step2Hint)
+
+        setupCard.addSubview(setupBox)
+        setupBox.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            setupBox.leadingAnchor.constraint(equalTo: setupCard.leadingAnchor, constant: 14),
+            setupBox.trailingAnchor.constraint(equalTo: setupCard.trailingAnchor, constant: -14),
+            setupBox.topAnchor.constraint(equalTo: setupCard.topAnchor, constant: 14),
+            setupBox.bottomAnchor.constraint(equalTo: setupCard.bottomAnchor, constant: -14),
+            cmdField.widthAnchor.constraint(equalToConstant: inner - 92),
+            relayField.widthAnchor.constraint(equalToConstant: inner - 78),
+            connectButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 62),
+            connectButton.heightAnchor.constraint(equalToConstant: 26)
+        ])
+        setupCard.isHidden = true
+    }
+
+    @objc private func copyCommandPressed() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(MainWindowController.relayCommand, forType: .string)
+        setupStatus.stringValue = L("setup.cmdCopied")
+        fitWindow()
+    }
+
+    @objc private func connectPressed() {
+        var text = relayField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        while text.hasSuffix("/") { text.removeLast() }
+        guard text.hasPrefix("ws://") || text.hasPrefix("wss://") else {
+            setupStatus.stringValue = L("setup.badURL")
+            fitWindow()
+            return
+        }
+        setupStatus.stringValue = L("setup.connecting")
+        fitWindow()
+        onSetRelay?(text)
+    }
+
     private func buildAuthCard(inner: CGFloat) {
         scopeTitle.stringValue = L("auth.title")
         scopeTitle.font = NSFont.systemFont(ofSize: 11.5, weight: .semibold)
@@ -552,6 +686,43 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             authDone.isHidden = false
         } else {
             authDone.isHidden = true
+        }
+
+        // --- 还没有中继:整扇窗只讲一件事 ------------------------------------
+        // 内测版不带默认中继(Settings.defaultRelayURL 为空),所以装完第一屏
+        // 必然走到这里。在中继连上之前把「复制给 agent」藏掉 —— 那颗按钮点了
+        // 也只会失败(copyPairingBlock 要求中继在线),让人白点一次不如不给点。
+        let relayOnline: Bool
+        if case .online = model.relayState { relayOnline = true } else { relayOnline = false }
+        let needsRelay = model.relayURL.isEmpty || !relayOnline
+        setupCard.isHidden = !needsRelay
+        copyButton.isHidden = needsRelay
+        copyStatus.isHidden = needsRelay
+        if needsRelay {
+            if relayField.stringValue.isEmpty && !model.relayURL.isEmpty {
+                relayField.stringValue = model.relayURL
+            }
+            // 填过地址却连不上,和压根没填过,要说不一样的话。
+            if model.relayURL.isEmpty {
+                setupStatus.stringValue = ""
+            } else if case .failed = model.relayState {
+                setupStatus.stringValue = L("setup.failed")
+            } else if case .retrying = model.relayState {
+                setupStatus.stringValue = L("setup.failed")
+            }
+            badge.setSymbol("hand.raised.fill")
+            headline.stringValue = L("main.headline")
+            lead.stringValue = L("setup.needRelay")
+            lead.isHidden = false
+            authCard.isHidden = true
+            waitingRow.isHidden = true
+            spinner.stopAnimation(nil)
+            fitWindow()
+            return
+        }
+        // 中继刚连上、还没有 agent 时,告诉他下一步该干什么
+        if model.agents.isEmpty && setupStatus.stringValue != L("setup.done") {
+            setupStatus.stringValue = L("setup.done")
         }
 
         let live = model.agents.filter { model.online.contains($0.id) }

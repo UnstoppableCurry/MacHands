@@ -66,7 +66,10 @@ struct AuthorizedAgent: Codable, Equatable {
 /// 持久化配置。**不含任何私钥**。
 struct Settings: Codable, Equatable {
 
-    static let defaultRelayURL = "ws://134.199.230.126:8443"
+    // 内测版故意不带默认中继:B 方案的前提是每个用户跑自己那台。
+    // 留一个默认值会让人装完直接点「复制给 agent」,静默走我们的中继,
+    // 而他自己完全看不出来 —— 那正是这个方案要避免的事。
+    static let defaultRelayURL = ""
 
     var relayURL: String
     var macName: String
