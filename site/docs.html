@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文档 · Docs — MacHands</title>
+<meta name="description" content="MacHands 文档:配对三步、常用命令、三种授权范围、许可证、出问题看哪里。">
+<meta property="og:title" content="文档 · Docs — MacHands">
+<meta property="og:description" content="配对三步、常用命令、三种授权范围、许可证、排障。">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="__SITE_ORIGIN__/docs.html">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script>
+(function(){try{var l=localStorage.getItem('mh-lang');if(l!=='zh'&&l!=='en'){l=(navigator.language||'en').toLowerCase().indexOf('zh')===0?'zh':'en'}var h=document.documentElement;h.setAttribute('data-lang',l);h.lang=l==='zh'?'zh-CN':'en'}catch(e){}})();
+</script>
+</head>
+<body>
+
+<a class="skip" href="#main"><span lang="zh">跳到正文</span><span lang="en">Skip to content</span></a>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="26" height="26">MacHands</a>
+    <div class="nav-links">
+      <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+      <a href="/docs.html" aria-current="page"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+      <a href="/download.html"><span lang="zh">下载</span><span lang="en">Download</span></a>
+      <button class="langbtn" data-langbtn type="button">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+<section class="hero" style="padding-bottom:16px">
+  <div class="wrap narrow">
+    <h1><span lang="zh">文档</span><span lang="en">Docs</span></h1>
+    <p class="lede">
+      <span lang="zh">从配对到排障,一页看完。命令都可以加 <code>--help</code> 看细节。</span>
+      <span lang="en">Pairing to troubleshooting, on one page. Every command takes <code>--help</code>.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ── 配对 ─────────────────────────────────────────────────────────────── -->
+<section class="tight">
+  <div class="wrap narrow">
+    <h2 id="pair"><span lang="zh">配对:三步</span><span lang="en">Pairing: three steps</span></h2>
+    <div class="steps" style="margin-top:20px">
+      <div class="step">
+        <div>
+          <h3><span lang="zh">在 Mac 上点「复制给 agent」</span><span lang="en">Click "Copy for agent" on the Mac</span></h3>
+          <p><span lang="zh">菜单栏那只手 → 复制给 agent。配对码 10 分钟有效,只能用一次。</span><span lang="en">The hand in the menu bar → Copy for agent. The code is valid for ten minutes and single-use.</span></p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3><span lang="zh">贴给 agent,让它自己跑</span><span lang="en">Paste it to the agent</span></h3>
+          <p><span lang="zh">复制到的内容里就有下面这行。</span><span lang="en">The copied block already contains this line.</span></p>
+          <code class="cmd">npx -y machands pair "MH1…"</code>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3><span lang="zh">在 Mac 上选一次授权范围</span><span lang="en">Pick a scope on the Mac</span></h3>
+          <p><span lang="zh">窗口会自己弹出来。点一下就生效,自检自己跑完。</span><span lang="en">The window opens by itself. Your click applies immediately and the self-check runs.</span></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="small" style="margin-top:20px">
+      <span lang="zh">配成之后可以设个默认 Mac,后面就不用每条都写 <code>--mac</code>:</span>
+      <span lang="en">Set a default Mac afterwards so you don't repeat <code>--mac</code> every time:</span>
+    </p>
+    <code class="cmd">machands use "我的 Mac mini"</code>
+  </div>
+</section>
+
+<!-- ── 授权范围 ─────────────────────────────────────────────────────────── -->
+<section class="tight" style="background:var(--bg-soft)">
+  <div class="wrap narrow">
+    <h2 id="scopes"><span lang="zh">三种授权范围</span><span lang="en">The three scopes</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">在窗口里点一下就换,也可以从菜单栏那只手 → 模式 换。<strong>危险命令黑名单在三种范围下都生效</strong>,包括开发者。</span>
+      <span lang="en">Switch with one click in the window, or from the hand in the menu bar → Mode. <strong>The denylist applies in all three</strong>, including Developer.</span>
+    </p>
+    <div class="grid grid-3" style="margin-top:20px">
+      <div class="card">
+        <h3><span lang="zh">开发者</span><span lang="en">Developer</span></h3>
+        <p><span lang="zh">全部放行,不弹卡。适合你信任这个 agent、要它连续干活的时候。</span><span lang="en">Everything allowed, no cards. For when you trust the agent and want it working continuously.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">只读</span><span lang="en">Read-only</span></h3>
+        <p><span lang="zh">只能看不能改:截屏、读文件、查状态可以;执行命令、写文件、动键鼠一律拒绝。</span><span lang="en">Look, don't touch: screenshots, reading files and status are fine; commands, writes and input are refused.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">逐条审批</span><span lang="en">Ask</span></h3>
+        <p><span lang="zh">每条都弹卡等你点:允许一次 / 允许 1 小时 / 总是允许这条 / 拒绝。</span><span lang="en">Every command waits for a card: allow once / for an hour / always this one / refuse.</span></p>
+      </div>
+    </div>
+    <div class="note" style="margin-top:18px">
+      <span lang="zh">切到<strong>只读</strong>或<strong>逐条审批</strong>之后,agent 自己没法把模式改回去 —— 改模式这件事本身也要经过审批。这是有意的:只有坐在 Mac 前的人能放开。</span>
+      <span lang="en">Once you switch to <strong>Read-only</strong> or <strong>Ask</strong>, the agent cannot switch back on its own — changing the mode is itself gated. That's deliberate: only the person at the Mac can loosen it.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── 命令 ─────────────────────────────────────────────────────────────── -->
+<section class="tight">
+  <div class="wrap">
+    <h2 id="commands"><span lang="zh">常用命令</span><span lang="en">Common commands</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">全部命令见 <code>machands --help</code>。公共参数:<code>--mac</code>、<code>--json</code>、<code>--why</code>。</span>
+      <span lang="en">Full list in <code>machands --help</code>. Shared flags: <code>--mac</code>, <code>--json</code>, <code>--why</code>.</span>
+    </p>
+
+    <h3 style="margin:26px 0 10px"><span lang="zh">连接与体检</span><span lang="en">Connect &amp; check</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th><span lang="zh">命令</span><span lang="en">Command</span></th>
+          <th><span lang="zh">做什么</span><span lang="en">What it does</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>machands pair "MH1…"</code></td><td><span lang="zh">连接并配对</span><span lang="en">Connect and pair</span></td></tr>
+          <tr><td><code>machands macs</code></td><td><span lang="zh">列出已配对的 Mac 与在线状态</span><span lang="en">List paired Macs and who's online</span></td></tr>
+          <tr><td><code>machands use &lt;mac&gt;</code></td><td><span lang="zh">设默认 Mac</span><span lang="en">Set the default Mac</span></td></tr>
+          <tr><td><code>machands verify</code></td><td><span lang="zh">七项自检,每项 ✓/✗ 带修复指引</span><span lang="en">Seven checks, each ✓/✗ with a fix hint</span></td></tr>
+          <tr><td><code>machands doctor</code></td><td><span lang="zh">中继、身份、App 版本、签名、权限、是否装了多份</span><span lang="en">Relay, identity, app version, signature, permissions, duplicate installs</span></td></tr>
+          <tr><td><code>machands info</code></td><td><span lang="zh">机型、内存、磁盘、GPU、常用工具在不在</span><span lang="en">Model, memory, disk, GPU, whether your tools are installed</span></td></tr>
+          <tr><td><code>machands update</code></td><td><span lang="zh">让 Mac 上的 App 自己升级</span><span lang="en">Tell the app to update itself</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:26px 0 10px"><span lang="zh">执行</span><span lang="en">Run things</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th><span lang="zh">命令</span><span lang="en">Command</span></th>
+          <th><span lang="zh">做什么</span><span lang="en">What it does</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>machands run -- &lt;命令&gt;</code></td><td><span lang="zh">前台执行,输出实时透传,退出码原样返回</span><span lang="en">Foreground; output streams through and the exit code comes back unchanged</span></td></tr>
+          <tr><td><code>machands job submit -- &lt;命令&gt;</code></td><td><span lang="zh">后台作业,只打印 jobId</span><span lang="en">Background job; prints only the job id</span></td></tr>
+          <tr><td><code>machands job tail &lt;id&gt; --follow</code></td><td><span lang="zh">跟着看输出</span><span lang="en">Follow its output</span></td></tr>
+          <tr><td><code>machands job result &lt;id&gt; --wait 60</code></td><td><span lang="zh">等它跑完,退出码 = 作业退出码</span><span lang="en">Wait for it; your exit code is the job's</span></td></tr>
+          <tr><td><code>machands session open</code></td><td><span lang="zh">开一个交互式 shell 会话</span><span lang="en">Open an interactive shell session</span></td></tr>
+          <tr><td><code>machands power on --seconds 3600</code></td><td><span lang="zh">让 Mac 保持唤醒</span><span lang="en">Keep the Mac awake</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:26px 0 10px"><span lang="zh">文件、看与动</span><span lang="en">Files, eyes and hands</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th><span lang="zh">命令</span><span lang="en">Command</span></th>
+          <th><span lang="zh">做什么</span><span lang="en">What it does</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>machands put &lt;本地&gt; &lt;远端&gt;</code></td><td><span lang="zh">上传,目录自动打包</span><span lang="en">Upload; folders are packed automatically</span></td></tr>
+          <tr><td><code>machands get &lt;远端&gt; -o &lt;本地&gt;</code></td><td><span lang="zh">下载,远端是目录就打包传回并解开</span><span lang="en">Download; a remote folder comes back packed and is unpacked for you</span></td></tr>
+          <tr><td><code>machands ls &lt;路径&gt; --depth 2</code></td><td><span lang="zh">看目录</span><span lang="en">List a folder</span></td></tr>
+          <tr><td><code>machands shot -o out.png</code></td><td><span lang="zh">截整个屏幕</span><span lang="en">Screenshot the whole screen</span></td></tr>
+          <tr><td><code>machands window-shot --app Safari</code></td><td><span lang="zh">只截某个 App 的窗口</span><span lang="en">Screenshot one app's window</span></td></tr>
+          <tr><td><code>machands record --seconds 5 -o out.mov</code></td><td><span lang="zh">录屏</span><span lang="en">Record the screen</span></td></tr>
+          <tr><td><code>machands input click X Y</code></td><td><span lang="zh">点一下;还有 move / drag / scroll / key / type</span><span lang="en">Click; also move / drag / scroll / key / type</span></td></tr>
+          <tr><td><code>machands clip get</code></td><td><span lang="zh">读剪贴板;<code>clip set</code> 写</span><span lang="en">Read the clipboard; <code>clip set</code> writes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:26px 0 10px"><span lang="zh">MCP</span><span lang="en">MCP</span></h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th><span lang="zh">命令</span><span lang="en">Command</span></th>
+          <th><span lang="zh">做什么</span><span lang="en">What it does</span></th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>machands mcp</code></td><td><span lang="zh">以 stdio MCP 服务器运行,给 Claude Code / Codex / Cursor 用</span><span lang="en">Run as a stdio MCP server for Claude Code / Codex / Cursor</span></td></tr>
+          <tr><td><code>machands mcp servers</code></td><td><span lang="zh">列出 Mac 上已配置的 MCP 服务器</span><span lang="en">List the MCP servers configured on that Mac</span></td></tr>
+          <tr><td><code>machands mcp open &lt;名字&gt;</code></td><td><span lang="zh">借 Mac 的手起一个,打印 sid</span><span lang="en">Start one on the Mac; prints a session id</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── --why ────────────────────────────────────────────────────────────── -->
+<section class="tight" style="background:var(--bg-soft)">
+  <div class="wrap narrow">
+    <h2 id="why"><span lang="zh">写清楚你要干什么:<code>--why</code></span><span lang="en">Say what you're after: <code>--why</code></span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">会弹审批卡的命令都接 <code>--why</code>。Mac 前的人看到的是这句人话,不是命令本身;命令原文折在「详情」里。</span>
+      <span lang="en">Every command that can raise a card takes <code>--why</code>. The person at the Mac reads that sentence, not the command; the raw line sits behind a details toggle.</span>
+    </p>
+    <div class="grid grid-2" style="margin-top:18px">
+      <div class="card">
+        <h3 style="color:var(--accent)"><span lang="zh">好</span><span lang="en">Good</span></h3>
+        <code class="cmd">--why "确认雪场地形改完之后的样子"</code>
+        <p style="margin-top:10px"><span lang="zh">说的是目的。人一眼能判断该不该批。</span><span lang="en">States the goal. A human can decide at a glance.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">坏</span><span lang="en">Bad</span></h3>
+        <code class="cmd">--why "运行 screencapture"</code>
+        <p style="margin-top:10px"><span lang="zh">只是把命令换个说法,等于没说。</span><span lang="en">Just restates the command. Says nothing.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 许可证 ───────────────────────────────────────────────────────────── -->
+<section class="tight">
+  <div class="wrap narrow">
+    <h2 id="license"><span lang="zh">许可证</span><span lang="en">License</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">付款后你会收到一串以 <code>MHL1.</code> 开头的字符。在 Mac 上打开菜单栏那只手 → <strong>设置</strong>,把它粘进许可证输入框,回车。试用提示立刻消失,不用重启。</span>
+      <span lang="en">After payment you receive a string starting with <code>MHL1.</code>. On the Mac open the hand in the menu bar → <strong>Settings</strong>, paste it into the license field and press return. The trial notice disappears immediately; no restart.</span>
+    </p>
+    <p class="small" style="margin-top:12px">
+      <span lang="zh">试用是 <span data-mh="trial">7</span> 天。到期后只有「执行命令」和「写文件」被拦下,其余照常。</span>
+      <span lang="en">The trial runs <span data-mh="trial">7</span> days. When it lapses only "run a command" and "write a file" stop; everything else keeps working.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ── 排障 ─────────────────────────────────────────────────────────────── -->
+<section class="tight">
+  <div class="wrap narrow">
+    <h2 id="trouble"><span lang="zh">出问题先看这三处</span><span lang="en">When something's off, look here</span></h2>
+
+    <div class="grid" style="margin-top:20px; gap:14px">
+      <div class="card">
+        <h3>1 · <code>machands doctor</code></h3>
+        <p><span lang="zh">一条命令说清:中继通不通、Mac 在不在线、App 什么版本、签名是谁、三项权限给没给、<strong>是不是装了好几份 MacHands</strong>。装了多份会互相抢身份,表现成"时灵时不灵、方法找不到" —— 这是最常见的坑。</span><span lang="en">One command covers it: relay reachable, Mac online, app version, who signed it, the three permissions, and <strong>whether several copies of MacHands are installed</strong>. Duplicates fight over the same identity and look like "works sometimes, method not found" — the most common trap.</span></p>
+      </div>
+      <div class="card">
+        <h3>2 · <code>machands verify</code></h3>
+        <p><span lang="zh">七项挨个跑一遍:执行命令、读写文件、截屏、键鼠、通知、后台作业、MCP 桥。没过的那项后面直接写着该去哪儿修。</span><span lang="en">Runs all seven: commands, files, screenshot, input, notification, background job, MCP bridge. Each failure prints where to go and fix it.</span></p>
+      </div>
+      <div class="card">
+        <h3>3 · <span lang="zh">审计日志</span><span lang="en">The audit log</span></h3>
+        <p><span lang="zh">每一条请求、你的决定、执行结果都在这里,人话摘要和命令原文都有:</span><span lang="en">Every request, your decision and the outcome, with both the plain-language summary and the raw command:</span></p>
+        <code class="cmd">~/Library/Logs/MacHands/audit.log</code>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 10px"><span lang="zh">几个常见现象</span><span lang="en">A few common symptoms</span></h3>
+    <div style="margin-top:8px">
+      <details>
+        <summary><span lang="zh">命令被拒绝,但我没点拒绝</span><span lang="en">Refused, but nobody clicked refuse</span></summary>
+        <div class="answer"><span lang="zh">多半是模式在只读,或者整个暂停了。看菜单栏那只手 → 模式。危险命令黑名单也会直接拒,那种情况提示里会写出命中的是哪一条。</span><span lang="en">Usually the mode is Read-only, or everything is paused. Check the hand in the menu bar → Mode. The denylist also refuses outright — then the message names the rule it hit.</span></div>
+      </details>
+      <details>
+        <summary><span lang="zh">截屏失败,说没有权限</span><span lang="en">Screenshots fail with a permission error</span></summary>
+        <div class="answer"><span lang="zh">在 Mac 上打开「系统设置 → 隐私与安全性 → 屏幕录制」勾上 MacHands。想看 MacHands 自己的界面则不需要这个权限,用 <code>machands selfshot</code>。</span><span lang="en">Tick MacHands in System Settings → Privacy &amp; Security → Screen Recording. To look at MacHands' own window you don't need it at all — use <code>machands selfshot</code>.</span></div>
+      </details>
+      <details>
+        <summary><span lang="zh">提示某个方法不存在</span><span lang="en">It says a method doesn't exist</span></summary>
+        <div class="answer"><span lang="zh">Mac 上的 App 比 npm 包旧。跑 <code>machands update</code> 让它自己升级,或者在 Mac 上从菜单栏检查更新。</span><span lang="en">The app on the Mac is older than the npm package. Run <code>machands update</code>, or check for updates from the menu bar on the Mac.</span></div>
+      </details>
+      <details>
+        <summary><span lang="zh">连不上,说中继断了</span><span lang="en">It can't reach the relay</span></summary>
+        <div class="answer"><span lang="zh">同一个 agent 身份同时开两个连接会互相顶下线。确认没有第二个会话在用同一份配置,再跑 <code>machands doctor</code>。</span><span lang="en">Two connections sharing one agent identity kick each other off. Make sure a second session isn't using the same config, then run <code>machands doctor</code>.</span></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span><span lang="zh">MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。</span><span lang="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span></span>
+    <span class="spacer"></span>
+    <a href="/"><span lang="zh">首页</span><span lang="en">Home</span></a>
+    <a href="/download.html"><span lang="zh">下载</span><span lang="en">Download</span></a>
+    <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+    <a href="/privacy.html"><span lang="zh">隐私</span><span lang="en">Privacy</span></a>
+    <a href="/terms.html"><span lang="zh">条款</span><span lang="en">Terms</span></a>
+  </div>
+</footer>
+
+<script src="/assets/config.js"></script>
+<script src="/assets/site.js"></script>
+</body>
+</html>

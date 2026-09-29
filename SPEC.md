@@ -528,3 +528,72 @@ TCC 记的是代码签名的**指定要求**(designated requirement),不是路�
 4. 从 0.3.0 升到 0.3.1:升级后 `machands verify` 的 screen / input 两项**仍为 ✓**,用户没有重新勾过权限。
 5. 升级后 `/Applications/MacHands.app` 只有一份,`pgrep -fl MacHands` 只有一个正式进程。
 6. bundle id 被改成别的 → `release.sh` 退出 8,不产出任何包。
+
+---
+
+## 16. 收单与许可证发放
+
+付款到发证这条链路,实现在 `tools/store/`,是一个只监听 127.0.0.1 的 Node 服务,nginx 反代
+`/api/store/`。三条不能破的规矩,违反其中任何一条都算 bug:
+
+1. **验签对原始字节。** `JSON.parse` 再 `stringify` 出来的字节序不同,签名必然对不上;
+   即使碰巧对上也不安全(攻击者可以在语义等价的前提下改字段顺序)。
+2. **同一个 order_id 只发一次证。** 靠 `open(…, 'wx')` 的 O_EXCL 原子占坑,不靠"先查再写"——
+   那有竞态,渠道重推时会给同一个买家发两张。
+3. **先落盘再回 200。** 信可以后发、可以补发,证丢了就找不回来了。
+
+### 16.1 端点
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/store/webhook/:provider` | provider ∈ {lemonsqueezy, paddle, creem} |
+| GET | `/api/store/health` | `{ok, providers[], mailer, mailer_ready, orders}`,不含任何密钥 |
+
+未配 secret 的 provider 一律 404。**空 secret 绝不能等价于"不校验"。**
+
+### 16.2 各家签名
+
+| 渠道 | 头 | 被签的内容 | 额外校验 |
+|---|---|---|---|
+| Lemon Squeezy | `x-signature` | 原始 body | — |
+| Paddle | `paddle-signature`(`ts=…;h1=…`) | `${ts}:${原始body}` | 时间戳偏差 > 5 分钟拒收(防重放) |
+| Creem | `creem-signature` | 原始 body | — |
+
+三家都是 HMAC-SHA256 十六进制,比较用 `timingSafeEqual`。
+
+### 16.3 订单状态机
+
+```
+(推送进来) → claimed → issued → sent
+                    ↘ issued_hold        MAIL_BACKEND=none,等人工 resend
+                    ↘ issued_mail_failed 发信真失败,看 mail_error
+                    ↘ needs_email        推送里没邮箱,等人工 issue
+                    ↘ issue_failed       签证失败,多半是私钥读不到
+(退款推送)  → refunded                    只标记,不吊销
+```
+
+### 16.4 有意留下的边界
+
+- **退款不吊销许可证。** App 离线校验签名,没有吊销机制。要吊销就得让 App 每次启动联网,
+  代价(断网不能用、隐私、单点故障)大于收益。写进产品页,不藏着。
+- **许可证永久有效(exp = null)。** 49 美元是买断。"含一年更新"是承诺不是技术限制;
+  真按 exp 卡死,一年后买家的 App 会罢工,那不叫买断。要限制更新范围应该在 appcast 侧按购买日期判断。
+- **许可证不绑机器。** 换 Mac、重装都能再粘。
+
+### 16.5 密钥纪律
+
+- 签发私钥只经 `issueLicense()` 读进内存交给 `makeLicense()`,**不打印、不落盘到别处、不进日志**。
+- 所有渠道密钥、邮件密钥只从 `process.env` 读,代码里没有任何默认值;
+  仓库里只有 `store.env.example`,全是占位符。
+- 日志里的买家邮箱一律打码(`b***@example.com`);许可证本身不进日志。
+- `admin.mjs` 的 `list` / `show` 默认不打印许可证,要显式加 `--license`。
+
+### 16.6 验收
+
+1. 三家各用自造密钥算出正确签名 → 放行;改一个字节 → 401,且一个字节都不落盘。
+2. 同一 order_id 推两次 → 第二次 `action: "duplicate"`,订单数仍为 1,买家只收到一封信。
+3. Paddle 用一小时前的时间戳(签名正确)→ `stale_timestamp`。
+4. 未配 secret 的 provider → 404。
+5. 推送里没有邮箱 → `needs_email`,**不签证**。
+6. 退款 → 状态 `refunded`,记录里的许可证原样保留。
+7. `health` 的响应里不出现任何 secret。

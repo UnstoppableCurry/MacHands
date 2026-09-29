@@ -1,136 +1,183 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en" data-lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>下载 MacHands · Download MacHands</title>
-<meta name="description" content="MacHands — 给云端 AI 代理一双 Mac 上的手。Give your cloud AI agent a pair of hands on your Mac.">
-<style>
-  :root{
-    --bg:#fbfbfa; --card:#fff; --fg:#1a1a18; --muted:#6b6b66; --line:#e4e4df;
-    --accent:#1f6feb; --accent-fg:#fff; --code-bg:#f2f2ee; --warn-bg:#fff8e6; --warn-line:#e8d9a8;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --bg:#16161a; --card:#1e1e23; --fg:#ececea; --muted:#9b9b96; --line:#2e2e35;
-      --accent:#4c8dff; --accent-fg:#0b0b0d; --code-bg:#26262c; --warn-bg:#2a2418; --warn-line:#4a3f22;
-    }
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; background:var(--bg); color:var(--fg);
-    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:680px; margin:0 auto; padding:56px 22px 72px}
-  h1{font-size:30px; line-height:1.25; margin:0 0 6px; letter-spacing:-.01em}
-  .en{color:var(--muted); font-size:14px; margin:0}
-  .lede{margin:18px 0 0; font-size:17px}
-  .card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:22px; margin:26px 0}
-  .dl{display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:22px 0 8px}
-  a.btn{
-    display:inline-block; background:var(--accent); color:var(--accent-fg);
-    text-decoration:none; font-weight:600; font-size:16px;
-    padding:13px 24px; border-radius:9px;
-  }
-  a.btn:hover{filter:brightness(1.08)}
-  .meta{color:var(--muted); font-size:13px}
-  h2{font-size:17px; margin:0 0 12px; letter-spacing:-.005em}
-  h2 span{color:var(--muted); font-weight:400; font-size:13px; margin-left:8px}
-  ul{margin:0; padding-left:20px}
-  li{margin:9px 0}
-  li .en{display:block; margin-top:1px}
-  code{background:var(--code-bg); padding:1.5px 6px; border-radius:5px; font-size:13.5px;
-       font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-  .note{background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:9px;
-        padding:13px 16px; font-size:14px; margin:16px 0 0}
-  footer{color:var(--muted); font-size:13px; border-top:1px solid var(--line);
-         margin-top:40px; padding-top:20px}
-  a{color:var(--accent)}
-</style>
+<meta name="description" content="下载 MacHands。macOS 13 或更新,Apple 芯片与 Intel 都有,已通过苹果公证,双击即可打开。">
+<meta property="og:title" content="下载 MacHands · Download MacHands">
+<meta property="og:description" content="macOS 13+,Apple 芯片与 Intel,已通过苹果公证。">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="__SITE_ORIGIN__/download.html">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script>
+(function(){try{var l=localStorage.getItem('mh-lang');if(l!=='zh'&&l!=='en'){l=(navigator.language||'en').toLowerCase().indexOf('zh')===0?'zh':'en'}var h=document.documentElement;h.setAttribute('data-lang',l);h.lang=l==='zh'?'zh-CN':'en'}catch(e){}})();
+</script>
 </head>
-<body>
-<div class="wrap">
+<body data-appcast>
 
-  <h1>MacHands</h1>
-  <p class="en">Give your cloud AI agent a pair of hands on your Mac.</p>
-  <p class="lede">
-    给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。
-    <span class="en">Claude Code、Codex、Cursor 跑在云端时碰不到 Xcode、模拟器、Safari、公证 —— MacHands 让它们用你自己的 Mac 干这些活。</span>
-  </p>
+<a class="skip" href="#main"><span lang="zh">跳到正文</span><span lang="en">Skip to content</span></a>
 
-  <div class="dl">
-    <a class="btn" id="dl" href="/downloads/MacHands-0.3.0.zip" download>下载 MacHands <span id="ver">0.3.0</span></a>
-    <span class="meta" id="meta">macOS 13 或更新 · Apple 芯片与 Intel 通用 · 已经过苹果公证<br>
-      <span class="en">macOS 13+ · Universal (Apple silicon &amp; Intel) · Notarized by Apple</span></span>
-  </div>
-
-  <div class="card">
-    <h2>装好之后怎么开始 <span>Getting started</span></h2>
-    <ul>
-      <li>把 <code>MacHands.app</code> 拖进「应用程序」,双击打开。菜单栏会出现一只手。
-        <span class="en">Drag <code>MacHands.app</code> into Applications and open it. A hand appears in the menu bar.</span></li>
-      <li>点菜单里的 <strong>复制给 agent</strong>,把那段文字贴给你的云端 agent。
-        <span class="en">Click <strong>Copy for agent</strong> and paste the block into your cloud agent.</span></li>
-      <li>配对成功后会弹出<strong>授权页</strong>:选一次范围,点「授权并验证」。之后不再打扰。
-        <span class="en">Once paired, pick an access scope once and hit Authorize &amp; verify. It won't ask again.</span></li>
-    </ul>
-    <div class="note">
-      这个包经过苹果公证,双击就能打开。<br>
-      万一系统说「无法打开」,那多半是下载被截断了 —— 重新下一次;或者右键点 App → <strong>打开</strong>。
-      <span class="en">This build is notarized, so a double-click is enough. If macOS still refuses, re-download; or right-click the app → <strong>Open</strong>.</span>
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="26" height="26">MacHands</a>
+    <div class="nav-links">
+      <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+      <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+      <a href="/download.html" aria-current="page"><span lang="zh">下载</span><span lang="en">Download</span></a>
+      <button class="langbtn" data-langbtn type="button">中文</button>
     </div>
   </div>
+</nav>
 
-  <div class="card">
-    <h2>它会问你三项系统权限 <span>Three system permissions</span></h2>
-    <ul>
-      <li><strong>通知</strong> — 命令跑完、需要你决定时,能提醒你一声。
-        <span class="en"><strong>Notifications</strong> — so the agent can tell you a job finished or needs you.</span></li>
-      <li><strong>屏幕录制</strong> — 代理要截屏或录屏给你看结果时用。
-        <span class="en"><strong>Screen Recording</strong> — for screenshots and screen recordings.</span></li>
-      <li><strong>辅助功能</strong> — 代理要动键盘鼠标(点按钮、试手感)时用。
-        <span class="en"><strong>Accessibility</strong> — for keyboard and mouse control.</span></li>
-    </ul>
-    <p class="meta" style="margin:14px 0 0">
-      三项都可以随时在「系统设置 → 隐私与安全性」里收回;不给也能用,只是对应的能力不可用。
-      <span class="en">All three are revocable in System Settings → Privacy &amp; Security. MacHands still works without them, minus those abilities.</span>
+<main id="main">
+<section class="hero" style="padding-bottom:26px">
+  <div class="wrap narrow">
+    <p class="eyebrow">
+      <span lang="zh">版本 <span data-mh="version">0.3.0</span></span>
+      <span lang="en">Version <span data-mh="version">0.3.0</span></span>
+    </p>
+    <h1><span lang="zh">下载 MacHands</span><span lang="en">Download MacHands</span></h1>
+    <p class="lede">
+      <span lang="zh"><span data-mh="minosname">macOS 13 Ventura</span> 或更新。已用 Apple Developer ID 签名并通过苹果公证 —— 双击就能打开,不需要右键,也不用关任何安全设置。</span>
+      <span lang="en"><span data-mh="minosname">macOS 13 Ventura</span> or later. Signed with an Apple Developer ID and notarized by Apple — double-click and it opens. No right-click trick, no security settings to turn off.</span>
+    </p>
+
+    <div class="btn-row">
+      <a class="btn btn-primary" data-mh-href="universal" href="/dl/MacHands-0.3.0.dmg">
+        <span lang="zh">下载通用版 <span data-mh="version">0.3.0</span></span>
+        <span lang="en">Download universal <span data-mh="version">0.3.0</span></span>
+      </a>
+      <span class="pill pill-ok"><span lang="zh">已通过苹果公证</span><span lang="en">Notarized by Apple</span></span>
+    </div>
+    <p class="tiny" style="margin-top:12px">
+      <span lang="zh">不确定选哪个就下通用版,两种芯片都能跑。</span>
+      <span lang="en">Not sure which one? Take the universal build — it runs on both chips.</span>
     </p>
   </div>
+</section>
 
-  <div class="card">
-    <h2>升级由 App 自己完成 <span>Updates are built in</span></h2>
-    <p style="margin:0">
-      装好这一版之后就不用再来这个页面了:MacHands 会自己检查新版本、验证签名、原地替换并重启。
-      <strong>升级后不需要重新授权</strong>系统权限。
-    </p>
-    <p class="en" style="margin:8px 0 0">
-      You only download once. MacHands checks for updates itself, verifies the signature, replaces itself in place and relaunches — and your system permissions survive the upgrade.
-    </p>
+<section class="tight">
+  <div class="wrap narrow">
+    <h2><span lang="zh">三个包,怎么选</span><span lang="en">Three builds, which one</span></h2>
+    <div class="grid grid-3" style="margin-top:20px">
+      <div class="card">
+        <h3><span lang="zh">通用版</span><span lang="en">Universal</span></h3>
+        <p><span lang="zh">同时含两种芯片的代码。不知道自己是哪种就选它,唯一的代价是包大一点。</span><span lang="en">Contains code for both chips. Pick this if you don't know which Mac you have; it's just a slightly larger file.</span></p>
+        <a class="btn btn-ghost btn-block" style="margin-top:14px" data-mh-href="universal" href="/dl/MacHands-0.3.0.dmg">
+          <span lang="zh">下载</span><span lang="en">Download</span>
+        </a>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">Apple 芯片</span><span lang="en">Apple silicon</span></h3>
+        <p><span lang="zh">M1 及以后的机型。左上角苹果菜单 → 关于本机,芯片写着 M 开头的就是它。</span><span lang="en">M1 and later. Apple menu → About This Mac; if the chip name starts with M, this is yours.</span></p>
+        <a class="btn btn-ghost btn-block" style="margin-top:14px" data-mh-href="arm64" href="/dl/MacHands-0.3.0-apple-silicon.dmg">
+          <span lang="zh">下载</span><span lang="en">Download</span>
+        </a>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">Intel</span><span lang="en">Intel</span></h3>
+        <p><span lang="zh">2020 年前后的老机型,「关于本机」里写着 Intel Core。</span><span lang="en">Older Macs from around 2020 and before — About This Mac says Intel Core.</span></p>
+        <a class="btn btn-ghost btn-block" style="margin-top:14px" data-mh-href="intel" href="/dl/MacHands-0.3.0-intel.dmg">
+          <span lang="zh">下载</span><span lang="en">Download</span>
+        </a>
+      </div>
+    </div>
   </div>
+</section>
 
-  <footer>
-    MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。<br>
-    <span class="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span>
-  </footer>
+<section class="tight">
+  <div class="wrap narrow">
+    <div class="card">
+      <h3><span lang="zh">装好之后怎么开始</span><span lang="en">After it's installed</span></h3>
+      <div class="steps" style="margin-top:18px">
+        <div class="step">
+          <div>
+            <h3><span lang="zh">拖进「应用程序」,双击打开</span><span lang="en">Drag into Applications, double-click</span></h3>
+            <p><span lang="zh">菜单栏会出现一只手。它没有 Dock 图标,这是有意的。</span><span lang="en">A hand shows up in the menu bar. There's no Dock icon — that's deliberate.</span></p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3><span lang="zh">点「复制给 agent」</span><span lang="en">Click "Copy for agent"</span></h3>
+            <p><span lang="zh">把复制到的那段贴给你的云端 agent,它自己会执行。</span><span lang="en">Paste the block into your cloud agent; it runs the line itself.</span></p>
+          </div>
+        </div>
+        <div class="step">
+          <div>
+            <h3><span lang="zh">选一次授权范围</span><span lang="en">Pick a scope, once</span></h3>
+            <p><span lang="zh">配对成功后窗口会自己弹出来。点一下就生效,自检自己跑完,之后不再打扰。</span><span lang="en">The window opens itself once paired. Your click takes effect immediately, the self-check runs on its own, and it won't ask again.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-</div>
+<section class="tight">
+  <div class="wrap narrow">
+    <div class="card">
+      <h3><span lang="zh">它会要三项系统权限</span><span lang="en">It asks for three system permissions</span></h3>
+      <ul class="checks" style="margin-top:14px">
+        <li><strong><span lang="zh">通知</span><span lang="en">Notifications</span></strong>
+          — <span lang="zh">命令跑完或需要你决定时提醒你一声。</span><span lang="en">so it can tell you a job finished or needs you.</span></li>
+        <li><strong><span lang="zh">屏幕录制</span><span lang="en">Screen Recording</span></strong>
+          — <span lang="zh">截屏和录屏。</span><span lang="en">for screenshots and screen recordings.</span></li>
+        <li><strong><span lang="zh">辅助功能</span><span lang="en">Accessibility</span></strong>
+          — <span lang="zh">控制键盘鼠标。</span><span lang="en">to drive the keyboard and mouse.</span></li>
+      </ul>
+      <p class="small" style="margin-top:14px">
+        <span lang="zh">三项都能在「系统设置 → 隐私与安全性」里随时收回。不给也能用,只是对应的能力不可用,自检会如实标红。</span>
+        <span lang="en">All three are revocable in System Settings → Privacy &amp; Security. MacHands still runs without them — the matching abilities just go red in the self-check.</span>
+      </p>
+    </div>
+  </div>
+</section>
 
-<script>
-// 下载链接与版本号以 appcast.json 为准,这样发新版只要传两个文件,页面不用改。
-// 拿不到就用上面写死的那份,页面照样能用。
-fetch('/appcast.json', { cache: 'no-store' })
-  .then(function (r) { return r.ok ? r.json() : null })
-  .then(function (a) {
-    if (!a || !a.url || !a.version) return
-    document.getElementById('dl').href = a.url
-    document.getElementById('ver').textContent = a.version
-    if (a.min_os) {
-      var m = document.getElementById('meta')
-      m.innerHTML = m.innerHTML.replace(/macOS 13/g, 'macOS ' + a.min_os.split('.')[0])
-    }
-  })
-  .catch(function () {})
-</script>
+<section class="tight">
+  <div class="wrap narrow">
+    <div class="note">
+      <strong><span lang="zh">以后不用再来这个页面。</span><span lang="en">You won't need this page again.</span></strong>
+      <span lang="zh">MacHands 会自己检查新版本、验证签名、原地替换并重启。签名不变,所以升级后系统权限都还在,不用重新勾。</span>
+      <span lang="en">MacHands checks for updates itself, verifies the signature, replaces itself in place and relaunches. The signing identity doesn't change, so your system permissions survive.</span>
+    </div>
+  </div>
+</section>
+
+<section class="tight">
+  <div class="wrap narrow">
+    <h2><span lang="zh">agent 那一端</span><span lang="en">The agent side</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">配对成功后 App 会把下面这几行直接复制给你。这里列出来只是让你知道会装什么。</span>
+      <span lang="en">The app hands you these lines after pairing. They're printed here only so you know what gets installed.</span>
+    </p>
+    <pre class="term" style="margin-top:14px"><span class="o"># Claude Code</span>
+<span class="p">$</span> <span class="c">claude mcp add machands -- npx -y machands mcp</span>
+
+<span class="o"># 命令行 / any shell</span>
+<span class="p">$</span> <span class="c">npx -y machands pair "MH1…"</span></pre>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span><span lang="zh">MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。</span><span lang="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span></span>
+    <span class="spacer"></span>
+    <a href="/"><span lang="zh">首页</span><span lang="en">Home</span></a>
+    <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+    <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+    <a href="/privacy.html"><span lang="zh">隐私</span><span lang="en">Privacy</span></a>
+    <a href="/terms.html"><span lang="zh">条款</span><span lang="en">Terms</span></a>
+  </div>
+</footer>
+
+<script src="/assets/config.js"></script>
+<script src="/assets/site.js"></script>
 </body>
 </html>

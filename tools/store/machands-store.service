@@ -1,0 +1,33 @@
+[Unit]
+Description=MacHands store (payment webhooks -> license delivery)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 密钥全在这个文件里,由人手工创建,chmod 600 root:root。仓库里只有 store.env.example。
+EnvironmentFile=/etc/machands/store.env
+WorkingDirectory=/opt/machands/machands
+ExecStart=/usr/bin/node /opt/machands/machands/tools/store/server.mjs
+Restart=always
+RestartSec=3
+
+# 结构化日志走 stdout,journald 收。
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=machands-store
+
+# 收紧一点:这个服务只需要读签发私钥、写订单目录、连出去发信。
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/machands/store
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

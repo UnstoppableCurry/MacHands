@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隐私 · Privacy — MacHands</title>
+<meta name="description" content="MacHands 隐私说明:内容端到端加密,中继只见密文,审计日志只留在你自己的 Mac 上,网站不装统计。">
+<meta property="og:title" content="隐私 · Privacy — MacHands">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="__SITE_ORIGIN__/privacy.html">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script>
+(function(){try{var l=localStorage.getItem('mh-lang');if(l!=='zh'&&l!=='en'){l=(navigator.language||'en').toLowerCase().indexOf('zh')===0?'zh':'en'}var h=document.documentElement;h.setAttribute('data-lang',l);h.lang=l==='zh'?'zh-CN':'en'}catch(e){}})();
+</script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="26" height="26">MacHands</a>
+    <div class="nav-links">
+      <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+      <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+      <a href="/download.html"><span lang="zh">下载</span><span lang="en">Download</span></a>
+      <button class="langbtn" data-langbtn type="button">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+<section class="hero" style="padding-bottom:10px">
+  <div class="wrap narrow">
+    <h1><span lang="zh">隐私</span><span lang="en">Privacy</span></h1>
+    <p class="lede">
+      <span lang="zh">写实话,不写律师话。这一页说清楚哪些数据存在、存在哪里、谁看得见。</span>
+      <span lang="en">Written plainly, not defensively. What data exists, where it sits, and who can read it.</span>
+    </p>
+  </div>
+</section>
+
+<section class="tight">
+  <div class="wrap narrow">
+
+    <h2><span lang="zh">你和 agent 之间传的东西</span><span lang="en">What travels between you and the agent</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">命令、文件内容、截屏、剪贴板 —— 这些在离开你的 Mac 之前就已经加密(X25519 密钥协商 + ChaCha20-Poly1305)。密钥只存在于你的 Mac 和你的 agent 两端。中转服务器负责转发密文,<strong>解不开,也不保存内容</strong>。</span>
+      <span lang="en">Commands, file contents, screenshots, clipboard text — all encrypted before they leave your Mac (X25519 key agreement plus ChaCha20-Poly1305). The keys exist only on your Mac and in your agent. The relay forwards ciphertext; it <strong>cannot read it and does not store it</strong>.</span>
+    </p>
+
+    <h2 style="margin-top:32px"><span lang="zh">中转服务器确实会记的东西</span><span lang="en">What the relay does record</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">为了把消息投递到正确的一端并排查故障,服务器会记录连接层面的元数据:设备与 agent 的公钥标识、连接与断开的时间、来源 IP。<strong>不含</strong>命令内容、文件内容、截屏。</span>
+      <span lang="en">To route messages and debug outages the server keeps connection metadata: the public-key identifiers of the device and agent, connect and disconnect timestamps, and the source IP address. It does <strong>not</strong> include command contents, file contents or screenshots.</span>
+    </p>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">不想经过我们的服务器,可以自己架一台中转服务器,把 App 指过去。</span>
+      <span lang="en">If you'd rather not pass through ours at all, run your own relay and point the app at it.</span>
+    </p>
+
+    <h2 style="margin-top:32px"><span lang="zh">审计日志只在你自己机器上</span><span lang="en">The audit log never leaves your Mac</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">每条请求、你的决定、执行结果都写在 <code>~/Library/Logs/MacHands/audit.log</code>。这个文件<strong>不会上传</strong>,我们看不到。你可以随时删。</span>
+      <span lang="en">Every request, your decision and the outcome go to <code>~/Library/Logs/MacHands/audit.log</code>. That file is <strong>never uploaded</strong> and we never see it. Delete it whenever you like.</span>
+    </p>
+
+    <h2 style="margin-top:32px"><span lang="zh">这个网站</span><span lang="en">This website</span></h2>
+    <ul class="checks" style="margin-top:12px">
+      <li><span lang="zh">没有第三方统计、没有广告脚本、没有外部字体或 CDN。页面上加载的每一个文件都来自本站。</span><span lang="en">No third-party analytics, no ad scripts, no external fonts or CDNs. Every file the page loads comes from this site.</span></li>
+      <li><span lang="zh">没有跟踪 Cookie。浏览器本地只存一项:你选的语言。</span><span lang="en">No tracking cookies. The only thing stored in your browser is your language choice.</span></li>
+      <li><span lang="zh">Web 服务器按惯例记访问日志(IP、时间、访问的地址),用于排障和防滥用。</span><span lang="en">The web server keeps ordinary access logs (IP, time, path) for troubleshooting and abuse prevention.</span></li>
+    </ul>
+
+    <h2 style="margin-top:32px"><span lang="zh">购买时的信息</span><span lang="en">When you buy</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">付款由第三方支付服务商处理,<strong>我们拿不到你的卡号</strong>。我们保存的是签发和补发许可证所必需的最少信息:邮箱、订单号、购买时间。</span>
+      <span lang="en">Payment is handled by a third-party provider; <strong>we never see your card number</strong>. We keep only what's needed to issue and re-issue a license: your email address, the order id and the purchase date.</span>
+    </p>
+
+    <h2 style="margin-top:32px"><span lang="zh">你可以要求删除</span><span lang="en">Deletion</span></h2>
+    <p class="small" style="margin-top:10px">
+      <span lang="zh">写信给我们要求删除购买记录即可,处理后你的许可证仍然有效,但我们将无法再为你补发。</span>
+      <span lang="en">Ask us and we'll delete your purchase record. Your license keeps working afterwards, but we will no longer be able to re-issue it for you.</span>
+    </p>
+
+    <p class="tiny" style="margin-top:34px">
+      <span lang="zh">本页如有变更,会在这里更新。</span>
+      <span lang="en">Changes to this page are published here.</span>
+    </p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span><span lang="zh">MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。</span><span lang="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span></span>
+    <span class="spacer"></span>
+    <a href="/"><span lang="zh">首页</span><span lang="en">Home</span></a>
+    <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+    <a href="/terms.html"><span lang="zh">条款</span><span lang="en">Terms</span></a>
+  </div>
+</footer>
+
+<script src="/assets/config.js"></script>
+<script src="/assets/site.js"></script>
+</body>
+</html>

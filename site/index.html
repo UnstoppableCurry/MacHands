@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MacHands — 给云端 AI 一双 Mac 上的手</title>
+<meta name="description" content="MacHands 让 Claude Code、Codex、Cursor 这类云端 AI 在你自己的 Mac 上干活:跑命令、读写文件、截屏、控制键鼠。端到端加密,每一步都归你管。">
+<meta property="og:title" content="MacHands — 给云端 AI 一双 Mac 上的手">
+<meta property="og:description" content="让云端 AI 在你自己的 Mac 上干活。端到端加密,每一步都归你管。">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:url" content="__SITE_ORIGIN__/">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<script>
+/* 在首屏绘制前定好语言,避免中英文闪一下。没有 JS 时保持英文。 */
+(function(){try{var l=localStorage.getItem('mh-lang');if(l!=='zh'&&l!=='en'){l=(navigator.language||'en').toLowerCase().indexOf('zh')===0?'zh':'en'}var h=document.documentElement;h.setAttribute('data-lang',l);h.lang=l==='zh'?'zh-CN':'en'}catch(e){}})();
+</script>
+</head>
+<body>
+
+<a class="skip" href="#main"><span lang="zh">跳到正文</span><span lang="en">Skip to content</span></a>
+
+<nav class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><img src="/icon-512.png" alt="" width="26" height="26">MacHands</a>
+    <div class="nav-links">
+      <a href="#what" class="hide-sm"><span lang="zh">能干什么</span><span lang="en">What it does</span></a>
+      <a href="#safe" class="hide-sm"><span lang="zh">安全</span><span lang="en">Safety</span></a>
+      <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+      <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+      <a href="/download.html"><span lang="zh">下载</span><span lang="en">Download</span></a>
+      <button class="langbtn" data-langbtn type="button">中文</button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- ── 首屏 ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-cols">
+      <div>
+        <p class="eyebrow"><span lang="zh">macOS 菜单栏 App</span><span lang="en">macOS menu bar app</span></p>
+        <h1>
+          <span lang="zh">给云端 AI<br>一双 Mac 上的手</span>
+          <span lang="en">Give your cloud AI<br>a pair of hands on your Mac</span>
+        </h1>
+        <p class="lede">
+          <span lang="zh">Claude Code、Codex、Cursor 跑在别人的服务器上,碰不到你的 Xcode、模拟器、Safari 和公证流程。MacHands 让它们借用你自己的 Mac 完成这些事 —— 端到端加密,每一步都归你管。</span>
+          <span lang="en">Claude Code, Codex and Cursor run on somebody else's server. They can't touch your Xcode, your Simulator, your Safari, your notarization. MacHands lets them borrow your own Mac to do it — end-to-end encrypted, and every step stays yours to allow.</span>
+        </p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="/download.html">
+            <span lang="zh">免费下载 · 试用 <span data-mh="trial">7</span> 天</span>
+            <span lang="en">Download free · <span data-mh="trial">7</span>-day trial</span>
+          </a>
+          <a class="btn btn-ghost" href="/pricing.html">
+            <span lang="zh"><span data-mh="price">$49</span> 买断</span>
+            <span lang="en"><span data-mh="price">$49</span> once</span>
+          </a>
+        </div>
+        <p class="tiny" style="margin-top:14px">
+          <span lang="zh"><span data-mh="minosname">macOS 13 Ventura</span> 或更新 · Apple 芯片与 Intel · 已通过苹果公证</span>
+          <span lang="en"><span data-mh="minosname">macOS 13 Ventura</span> or later · Apple silicon &amp; Intel · Notarized by Apple</span>
+        </p>
+      </div>
+
+      <div class="menubar" aria-hidden="true">
+        <div class="bar"><span class="dot live"></span><span class="dot"></span><span class="dot"></span>&nbsp;MacHands</div>
+        <div class="body">
+          <div class="row"><span class="k">Mac</span><span class="v">牛马的 Mac mini</span></div>
+          <div class="row"><span class="k">Agent</span><span class="v">Claude Code</span></div>
+          <div class="row"><span class="k">Mode</span><span class="v">Developer</span></div>
+          <div class="row"><span class="k">Screen · Input · Notify</span><span class="v" style="color:var(--accent)">✓ ✓ ✓</span></div>
+        </div>
+      </div>
+    </div>
+
+    <pre class="term" style="margin-top:34px"><span class="p">$</span> <span class="c">machands run -- xcodebuild -scheme App -destination "platform=iOS Simulator,name=iPhone 16" test</span>
+<span class="o">** TEST SUCCEEDED **                                     </span><span class="k">42.7s</span>
+<span class="p">$</span> <span class="c">machands shot -o build.png --why "看一眼模拟器现在长什么样"</span>
+<span class="o">截屏已保存 build.png (1280×720)</span></pre>
+  </div>
+</section>
+
+<!-- ── 三个能力 ─────────────────────────────────────────────────────────── -->
+<section id="what">
+  <div class="wrap">
+    <h2><span lang="zh">它到底能替 agent 做什么</span><span lang="en">What the agent actually gets</span></h2>
+    <p class="lede"><span lang="zh">不是聊天,是真的在你的 Mac 上动手。</span><span lang="en">Not chat. Real work on your actual Mac.</span></p>
+
+    <div class="grid grid-3" style="margin-top:26px">
+      <div class="card">
+        <h3><span lang="zh">跑真的 Xcode 和构建</span><span lang="en">Real Xcode, real builds</span></h3>
+        <p><span lang="zh">编译、跑模拟器、签名、公证 —— 这些只有 Mac 能做的事,交给你的 Mac。长任务可以丢后台,回头再取结果。</span><span lang="en">Compile, drive the Simulator, sign, notarize — the things only a Mac can do. Long jobs go to the background; collect the result later.</span></p>
+        <code class="cmd">machands job submit -- ./build.sh</code>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">看得见屏幕,动得了鼠标</span><span lang="en">Sees the screen, moves the mouse</span></h3>
+        <p><span lang="zh">截屏、录屏、点按钮、敲键盘。agent 不再靠猜,改完能自己看一眼对不对。</span><span lang="en">Screenshots, screen recordings, clicks, keystrokes. The agent stops guessing and looks at what it just changed.</span></p>
+        <code class="cmd">machands input click 820 460</code>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">借用你本机的 MCP</span><span lang="en">Borrows your local MCP servers</span></h3>
+        <p><span lang="zh">你 Mac 上已经配好的 MCP 服务器,云端 agent 直接用,不用在服务器上重装一遍。</span><span lang="en">The MCP servers already configured on your Mac become available to a cloud agent — no second install on the server.</span></p>
+        <code class="cmd">machands mcp servers</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 安全 ─────────────────────────────────────────────────────────────── -->
+<section id="safe" style="background:var(--bg-soft)">
+  <div class="wrap">
+    <h2><span lang="zh">把控制权交出去,但不交底</span><span lang="en">Hand over control without handing over the keys</span></h2>
+    <p class="lede"><span lang="zh">不用开远程登录,不暴露 SSH。执行命令的是这个 App 本身。</span><span lang="en">No Remote Login, no exposed SSH. The app itself is what runs things.</span></p>
+
+    <div class="grid grid-2" style="margin-top:26px">
+      <div class="card">
+        <h3><span lang="zh">端到端加密</span><span lang="en">End-to-end encrypted</span></h3>
+        <p><span lang="zh">agent 与你的 Mac 之间用 X25519 + ChaCha20-Poly1305 加密,中转服务器只看得到密文。</span><span lang="en">X25519 + ChaCha20-Poly1305 between the agent and your Mac. The relay only ever sees ciphertext.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">三种授权范围,点一下就换</span><span lang="en">Three scopes, one click to switch</span></h3>
+        <p><span lang="zh">开发者(全放行)、只读(只能看不能改)、逐条审批(每条都问)。随时可以整个暂停。</span><span lang="en">Developer (everything), Read-only (look, don't touch), Ask (approve each command). Or pause the whole thing.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">危险命令一律拦下</span><span lang="en">A denylist that never yields</span></h3>
+        <p><span lang="zh"><code>rm -rf /</code>、<code>sudo</code>、<code>diskutil erase</code>、<code>mkfs</code> 这类不可逆动作,在任何模式下都执行不了 —— 包括全放行模式。</span><span lang="en"><code>rm -rf /</code>, <code>sudo</code>, <code>diskutil erase</code>, <code>mkfs</code> and friends are refused in every mode, including the permissive one.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">审批卡先说要干什么</span><span lang="en">The card says why, not just what</span></h3>
+        <p><span lang="zh">弹出来的是「想确认雪场地形改完的样子」,不是一条你要现场读懂的 shell 命令。命令原文折在「详情」里。</span><span lang="en">You see "wants to check how the terrain looks after the change", not a shell line you must parse on the spot. The raw command sits behind a details toggle.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">每一条都留底</span><span lang="en">Everything is logged</span></h3>
+        <p><span lang="zh">谁、什么时候、做了什么、你怎么决定的,全写进 <code>~/Library/Logs/MacHands/audit.log</code>,人话摘要和命令原文都在。</span><span lang="en">Who, when, what, and how you decided — all in <code>~/Library/Logs/MacHands/audit.log</code>, with both the plain-language summary and the raw command.</span></p>
+      </div>
+      <div class="card">
+        <h3><span lang="zh">授权只做一次</span><span lang="en">Authorize once</span></h3>
+        <p><span lang="zh">配对成功后选一次范围,系统权限一次给齐,自检当场跑给你看。之后不再打扰。</span><span lang="en">Pick a scope once after pairing, grant the system permissions once, watch the self-check run. It won't ask again.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 三步上手 ─────────────────────────────────────────────────────────── -->
+<section>
+  <div class="wrap narrow">
+    <h2><span lang="zh">三步,一次就好</span><span lang="en">Three steps, once</span></h2>
+    <div class="steps" style="margin-top:24px">
+      <div class="step">
+        <div>
+          <h3><span lang="zh">打开 MacHands</span><span lang="en">Open MacHands</span></h3>
+          <p><span lang="zh">菜单栏出现一只手。没有 Dock 图标,不占地方。</span><span lang="en">A hand appears in the menu bar. No Dock icon, no window in your way.</span></p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3><span lang="zh">点「复制给 agent」,贴给它</span><span lang="en">Click "Copy for agent", paste it</span></h3>
+          <p><span lang="zh">agent 自己执行那一行,几秒后菜单栏显示「已连接」。</span><span lang="en">The agent runs that one line itself. Seconds later the menu bar says connected.</span></p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h3><span lang="zh">选一次授权范围</span><span lang="en">Pick a scope, once</span></h3>
+          <p><span lang="zh">点一下就生效,自检自己跑完。之后它就能干活了。</span><span lang="en">It takes effect on the click and the self-check runs itself. Then it's working.</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-primary" href="/download.html"><span lang="zh">下载 MacHands</span><span lang="en">Download MacHands</span></a>
+      <a class="btn btn-ghost" href="/docs.html"><span lang="zh">看文档</span><span lang="en">Read the docs</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ── 为什么不上架 ─────────────────────────────────────────────────────── -->
+<section class="tight" style="background:var(--bg-soft)">
+  <div class="wrap narrow">
+    <div class="card">
+      <h3><span lang="zh">为什么不在 Mac App Store 上架</span><span lang="en">Why it isn't on the Mac App Store</span></h3>
+      <p style="margin-top:8px">
+        <span lang="zh">上架必须开沙盒,而沙盒禁止执行任意命令、控制键鼠、截取别的 App 的画面 —— 恰好是 MacHands 存在的全部理由。所以它只从这个官网发,用 Apple 的 Developer ID 签名并通过苹果公证,双击就能打开。</span>
+        <span lang="en">The App Store requires the sandbox, and the sandbox forbids running arbitrary commands, driving the keyboard and mouse, and capturing other apps' windows — which is the entire point of MacHands. So it ships from this site instead, signed with an Apple Developer ID and notarized by Apple. A double-click is all it takes.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── 定价 ─────────────────────────────────────────────────────────────── -->
+<section>
+  <div class="wrap">
+    <h2><span lang="zh">买一次,一直用</span><span lang="en">Buy once, keep it</span></h2>
+    <p class="lede"><span lang="zh">没有订阅,没有按月扣费。</span><span lang="en">No subscription. Nothing recurring.</span></p>
+
+    <div class="price-card" style="margin-top:24px">
+      <div>
+        <span class="price-amount" data-mh="price">$49</span>
+        <span class="price-unit"><span lang="zh">买断</span><span lang="en">once</span></span>
+      </div>
+      <ul class="checks">
+        <li><strong><span lang="zh">一台 Mac 的永久授权</span><span lang="en">A permanent license for one Mac</span></strong></li>
+        <li><span lang="zh">含 <span data-mh="updateyears">1</span> 年更新,过期后老版本照常能用</span><span lang="en">One year of updates; the version you have keeps working after that</span></li>
+        <li><span lang="zh">内置 <span data-mh="trial">7</span> 天试用,不用先付钱</span><span lang="en">A <span data-mh="trial">7</span>-day trial is built in — pay after, not before</span></li>
+        <li><span lang="zh">全部功能,没有分版本</span><span lang="en">Every feature. There is only one edition.</span></li>
+      </ul>
+      <a class="btn btn-primary btn-block" data-mh-href="checkout" href="__CHECKOUT_URL__">
+        <span lang="zh">购买 MacHands</span><span lang="en">Buy MacHands</span>
+      </a>
+      <p class="tiny" style="margin-top:12px; text-align:center">
+        <span lang="zh"><span data-mh="price">$49</span> 买断 · 含一年更新 · <span data-mh="trial">7</span> 天试用</span>
+        <span lang="en"><span data-mh="price">$49</span> once · one year of updates · <span data-mh="trial">7</span>-day trial</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── 常见问题 ─────────────────────────────────────────────────────────── -->
+<section class="tight">
+  <div class="wrap narrow">
+    <h2><span lang="zh">常见问题</span><span lang="en">Questions</span></h2>
+    <div style="margin-top:18px">
+
+      <details>
+        <summary><span lang="zh">试用期结束会怎样?</span><span lang="en">What happens when the trial ends?</span></summary>
+        <div class="answer"><span lang="zh">执行命令和写文件会被拦下,其余功能(查看状态、截屏、审计日志)照常。填进许可证就立刻恢复。</span><span lang="en">Running commands and writing files stop; everything else — status, screenshots, the audit log — keeps working. Paste a license and it resumes immediately.</span></div>
+      </details>
+
+      <details>
+        <summary><span lang="zh">我的代码会经过你们的服务器吗?</span><span lang="en">Does my code pass through your servers?</span></summary>
+        <div class="answer"><span lang="zh">数据确实经过中转服务器,但全程是密文,密钥只在你的 Mac 和你的 agent 手上,我们解不开也不存。你也可以自己架中转服务器。</span><span lang="en">Traffic passes through a relay, but only as ciphertext. The keys live on your Mac and in your agent — we can't read it and don't keep it. You can also run your own relay.</span></div>
+      </details>
+
+      <details>
+        <summary><span lang="zh">agent 会不会趁我不注意干坏事?</span><span lang="en">Can the agent do something behind my back?</span></summary>
+        <div class="answer"><span lang="zh">你可以选逐条审批,每条命令都弹卡等你点。即便选了全放行,不可逆的危险命令仍然被黑名单拦住,而且每一条都写进审计日志。菜单里随时可以暂停。</span><span lang="en">Pick the Ask scope and every command waits for your click. Even in the permissive scope the irreversible commands stay blocked, and everything lands in the audit log. You can pause it from the menu at any moment.</span></div>
+      </details>
+
+      <details>
+        <summary><span lang="zh">升级会不会又要我重新授权系统权限?</span><span lang="en">Do updates make me re-grant permissions?</span></summary>
+        <div class="answer"><span lang="zh">不会。MacHands 自己检查新版、验签、原地替换再重启,签名不变,所以屏幕录制和辅助功能这些授权都保留。</span><span lang="en">No. MacHands checks, verifies the signature, replaces itself in place and relaunches. The signing identity doesn't change, so Screen Recording and Accessibility survive.</span></div>
+      </details>
+
+      <details>
+        <summary><span lang="zh">支持哪些 agent?</span><span lang="en">Which agents work with it?</span></summary>
+        <div class="answer"><span lang="zh">任何能跑命令行或接 MCP 的都行:Claude Code、Codex、Cursor 都在用。agent 端是 npm 包 <code data-mh="npm">machands</code>,一行就能装。</span><span lang="en">Anything that can run a shell command or speak MCP — Claude Code, Codex and Cursor all work. The agent side is the npm package <code data-mh="npm">machands</code>, one line to install.</span></div>
+      </details>
+
+      <details>
+        <summary><span lang="zh">一份授权能装几台 Mac?</span><span lang="en">How many Macs per license?</span></summary>
+        <div class="answer"><span lang="zh">一台。多台请买多份;需要团队授权可以联系我们。</span><span lang="en">One. Buy one per Mac; get in touch if you need a team license.</span></div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span><span lang="zh">MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。</span><span lang="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span></span>
+    <span class="spacer"></span>
+    <a href="/download.html"><span lang="zh">下载</span><span lang="en">Download</span></a>
+    <a href="/pricing.html"><span lang="zh">定价</span><span lang="en">Pricing</span></a>
+    <a href="/docs.html"><span lang="zh">文档</span><span lang="en">Docs</span></a>
+    <a href="/privacy.html"><span lang="zh">隐私</span><span lang="en">Privacy</span></a>
+    <a href="/terms.html"><span lang="zh">条款</span><span lang="en">Terms</span></a>
+  </div>
+</footer>
+
+<script src="/assets/config.js"></script>
+<script src="/assets/site.js"></script>
+</body>
+</html>

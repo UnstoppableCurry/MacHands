@@ -26,7 +26,7 @@ const WEBROOT = process.env.MACHANDS_WEBROOT || '/var/www/machands'
 const LEDGER = process.env.MACHANDS_BETA_LEDGER || '/opt/machands/beta/invites.jsonl'
 const SITE = process.env.MACHANDS_SITE || 'https://134.199.230.126.nip.io'
 // 内测发的包。要跟着版本走,别写死在别处。
-const ASSET = process.env.MACHANDS_BETA_ASSET || 'MacHands-0.3.2.zip'
+const ASSET = process.env.MACHANDS_BETA_ASSET || 'MacHands-0.3.3.dmg'
 
 function parseArgs(argv) {
   const out = { _: [] }
@@ -133,30 +133,27 @@ function cmdInvite(email, days) {
   console.log(`记录写进 ${LEDGER}`)
   console.log('')
   console.log('─'.repeat(72))
+  // 0.3.3 起 App 自己带三步引导(起中继 → 贴地址 → 复制给 agent),
+  // 所以这封信只说它引导不了的两件事:去哪下载、许可证是哪一串。
+  // 把步骤在信里再抄一遍反而会和界面上的说法不同步。
   console.log(`把下面整段发给他:
 
 MacHands 内测邀请
 
-1) 下载并装上(拖进「应用程序」):
-   ${url}
+1) 下载装上:${url}
+   打开 DMG,把 MacHands 拖进「应用程序」。
 
 2) 打开 MacHands → 设置 → 许可证,粘这一行:
    ${license}
 
-3) 你需要一台自己的公网服务器(VPS)来当中继。在上面跑:
-   npm i -g machands
-   machands relay start --port 8443
+3) 剩下的 App 会一步步教你。它需要你有一台公网服务器(VPS)当中继 ——
+   界面上会给出要在服务器上跑的那行命令,直接复制。
 
-   它会打印一个 ws:// 地址。注意:云厂商的安全组默认拦掉所有入站端口,
-   要去控制台放行 8443,否则外面连不进来。在别的机器上
-   curl -s http://<你的公网IP>:8443/health 通了才算真的通了。
+   有一个坑值得先知道:云厂商的安全组默认拦掉所有入站端口。
+   中继跑起来之后,要去控制台放行 8443,否则你在服务器上 curl 本机是通的,
+   Mac 却怎么都连不上。
 
-4) 回到 MacHands → 设置 → 中继地址,填第 3 步打印的那个 ws:// 地址,保存。
-
-5) 点主界面的「复制给 agent」,把复制到的那段文字贴给你的 AI agent
-   (Claude Code / Codex / Cursor 都行),它会自己执行里面那一行完成配对。
-
-许可证 ${expDate} 到期。到期后 App 不会变砖:截屏、读文件、键鼠这些还能用,
+许可证 ${expDate} 到期。到期后 App 不会变砖:截屏、读文件、键鼠这些照常,
 只是不能再替 agent 执行命令和传文件。
 
 有任何问题直接回我。`)
