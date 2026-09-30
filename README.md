@@ -6,7 +6,7 @@ Give your cloud AI agent a pair of hands on your Mac.
 
 **Free. [MIT](LICENSE) licensed. No paid tier. No license to buy.**
 
-- **Website:** <https://unstoppablecurry.github.io/machands-site/>
+- **Website:** <https://machands.pages.dev>
 - **Source:** <https://github.com/UnstoppableCurry/MacHands>
 
 This repository is an **agent bridge**: a menu-bar Mac app plus a CLI / MCP server. It is not DataDance, not MacDisk, and not a disk-relocation tool.

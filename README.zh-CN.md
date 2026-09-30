@@ -6,7 +6,7 @@
 
 **完全免费 · [MIT](LICENSE) 开源 · 没有付费档 · 不用买许可证**
 
-- **官网：** <https://unstoppablecurry.github.io/machands-site/>
+- **官网：** <https://machands.pages.dev>
 - **源码：** <https://github.com/UnstoppableCurry/MacHands>
 
 本仓库是 **agent 桥**：菜单栏里的 Mac App，加上 CLI / MCP。不是 DataDance，不是 MacDisk，也不是外置磁盘管理工具。
