@@ -55,15 +55,20 @@
   <h1>MacHands</h1>
   <p class="en">Give your cloud AI agent a pair of hands on your Mac.</p>
   <p class="lede">
-    给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。
-    <span class="en">Claude Code、Codex、Cursor 跑在云端时碰不到 Xcode、模拟器、Safari、公证 —— MacHands 让它们用你自己的 Mac 干这些活。</span>
+    给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。完全免费,MIT 开源。
+    <span class="en">Claude Code、Codex、Cursor 跑在云端时碰不到 Xcode、模拟器、Safari、公证 —— MacHands 让它们用你自己的 Mac 干这些活。 Free and MIT-licensed; no paid tier.</span>
   </p>
 
   <div class="dl">
-    <a class="btn" id="dl" href="/downloads/MacHands-0.3.0.zip" download>下载 MacHands <span id="ver">0.3.0</span></a>
-    <span class="meta" id="meta">macOS 13 或更新 · Apple 芯片与 Intel 通用 · 已经过苹果公证<br>
-      <span class="en">macOS 13+ · Universal (Apple silicon &amp; Intel) · Notarized by Apple</span></span>
+    <a class="btn" href="https://github.com/UnstoppableCurry/MacHands">打开 GitHub 仓库</a>
+    <a class="btn" href="https://machands.pages.dev" style="background:transparent;color:var(--accent);border:1px solid var(--accent)">官网</a>
+    <span class="meta" id="meta">macOS 13 或更新 · 从源码构建,或等 GitHub Releases 出现签名包<br>
+      <span class="en">macOS 13+ · Build from source, or use GitHub Releases when a binary is published.</span></span>
   </div>
+  <p class="meta" style="margin:0 0 8px">
+    现在还没有现成的签名安装包可点。预定域名 machands.app 目前无法解析,请用官网 <a href="https://machands.pages.dev">machands.pages.dev</a>。
+    <span class="en">No signed download asset is published yet. machands.app does not resolve; use the official site above.</span>
+  </p>
 
   <div class="card">
     <h2>装好之后怎么开始 <span>Getting started</span></h2>
@@ -76,9 +81,9 @@
         <span class="en">Once paired, pick an access scope once and hit Authorize &amp; verify. It won't ask again.</span></li>
     </ul>
     <div class="note">
-      这个包经过苹果公证,双击就能打开。<br>
-      万一系统说「无法打开」,那多半是下载被截断了 —— 重新下一次;或者右键点 App → <strong>打开</strong>。
-      <span class="en">This build is notarized, so a double-click is enough. If macOS still refuses, re-download; or right-click the app → <strong>Open</strong>.</span>
+      从源码打出来的未签名包,第一次打开请<strong>右键 → 打开</strong>。<br>
+      GitHub Releases 上出现经公证的签名包之后,双击即可。
+      <span class="en">Unsigned source builds: right-click → <strong>Open</strong>. A notarized GitHub Release, once published, can be opened with a double-click.</span>
     </div>
   </div>
 
@@ -101,36 +106,21 @@
   <div class="card">
     <h2>升级由 App 自己完成 <span>Updates are built in</span></h2>
     <p style="margin:0">
-      装好这一版之后就不用再来这个页面了:MacHands 会自己检查新版本、验证签名、原地替换并重启。
-      <strong>升级后不需要重新授权</strong>系统权限。
+      签名包发布之后,MacHands 会自己检查新版本、验证签名、原地替换并重启。
+      <strong>升级后不需要重新授权</strong>系统权限。现在还没有 Release 附件时,请从仓库重新构建。
     </p>
     <p class="en" style="margin:8px 0 0">
-      You only download once. MacHands checks for updates itself, verifies the signature, replaces itself in place and relaunches — and your system permissions survive the upgrade.
+      After a signed build is published, MacHands can update itself in place — system permissions survive. Until a GitHub Release asset exists, rebuild from this repo.
     </p>
   </div>
 
   <footer>
+    源码 <a href="https://github.com/UnstoppableCurry/MacHands">github.com/UnstoppableCurry/MacHands</a>
+    · MIT · 官网 <a href="https://machands.pages.dev">machands.pages.dev</a><br>
     MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。<br>
     <span class="en">MacHands is not affiliated with Apple, Anthropic, OpenAI or xAI.</span>
   </footer>
 
 </div>
-
-<script>
-// 下载链接与版本号以 appcast.json 为准,这样发新版只要传两个文件,页面不用改。
-// 拿不到就用上面写死的那份,页面照样能用。
-fetch('/appcast.json', { cache: 'no-store' })
-  .then(function (r) { return r.ok ? r.json() : null })
-  .then(function (a) {
-    if (!a || !a.url || !a.version) return
-    document.getElementById('dl').href = a.url
-    document.getElementById('ver').textContent = a.version
-    if (a.min_os) {
-      var m = document.getElementById('meta')
-      m.innerHTML = m.innerHTML.replace(/macOS 13/g, 'macOS ' + a.min_os.split('.')[0])
-    }
-  })
-  .catch(function () {})
-</script>
 </body>
 </html>

@@ -1,6 +1,10 @@
-# 发布手册(官网分发)
+# 发布手册
 
-MacHands **不上 Mac App Store**,从官网发。这一页讲清楚:为什么、怎么发、以及只有你本人能做的那几步。
+MacHands 是免费的 [MIT](../LICENSE) 开源项目：**不上 Mac App Store，也不卖许可证。**
+对外网站目前是 <https://machands.pages.dev>（预定域名 `machands.app` 尚未解析）。
+签名包通过 [GitHub Releases](https://github.com/UnstoppableCurry/MacHands/releases) 发布；在 Release 附件出现之前，请从源码构建，不要编造下载地址。
+
+这一页讲维护者怎么签名、公证、生成 appcast，以及只有证书持有人能做的那几步。
 
 ---
 
@@ -15,7 +19,7 @@ Mac App Store 要求 App 跑在沙盒里。沙盒禁止的恰好是 MacHands 的
 | 截别的 App 的屏 | `screen.shot` / `screen.window` / `screen.record` |
 | 读用户主目录里的任意路径 | `fs.*` —— 拉日志、传源码 |
 
-这些不是"申请一下就能开"的例外,是沙盒的设计边界。所以:官网下载 + App 自动更新。
+这些不是"申请一下就能开"的例外,是沙盒的设计边界。所以:GitHub Releases 分发 + App 自动更新。
 
 ---
 
@@ -161,21 +165,25 @@ cd macapp
 > **票据钉在 .app 上,钉不到 zip 上。** 所以流程是"打 zip → 公证 → 钉 .app → 重打 zip",
 > 最后那个 zip 才是发出去的那一个。顺序错了,用户离线第一次打开会被拦。
 
-### 传两个文件上官网
+### 把两个文件发到用户找得到的地方
+
+公开渠道是 **GitHub Releases**（有附件之后才算发布）。`appcast.json` 里的 `url` 必须指向那个真实存在的 zip，不要写一个还不存在的地址。
+
+若你另外有静态站，两个文件的对应关系是：
 
 ```
-dist/MacHands-0.3.0.zip   →  https://machands.app/downloads/MacHands-0.3.0.zip
-dist/appcast.json         →  https://machands.app/appcast.json
+dist/MacHands-0.3.0.zip   →  <站点根>/downloads/MacHands-0.3.0.zip
+dist/appcast.json         →  <站点根>/appcast.json
 ```
 
-服务器上对应 `/var/www/machands/downloads/` 与 `/var/www/machands/appcast.json`
-(nginx 的 `location /` 直接 try_files,不用改配置)。
-`site/download.html` 传成 `/var/www/machands/download.html`,它会自己读 `appcast.json` 显示最新版本号。
+`--host` 填你实际上传 appcast 的根地址。预定域名 `https://machands.app` 目前无法解析；对外说明请指向 <https://machands.pages.dev>。
+`site/download.html` 是样例页，不是现成的签名包下载入口。
 
 ### 发完自查
 
 ```bash
-curl -s https://machands.app/appcast.json | head
+# 用你真正发布 appcast 的那个 URL，不要假设 machands.app 已经能解析
+curl -s "$APPCAST_URL" | head
 shasum -a 256 dist/MacHands-0.3.0.zip          # 要和 appcast 里的 sha256 一致
 spctl -a -vv -t exec dist/MacHands.app          # accepted
 xcrun stapler validate dist/MacHands.app        # The validate action worked!
@@ -188,11 +196,13 @@ xcrun stapler validate dist/MacHands.app        # The validate action worked!
 
 ## 4. appcast.json 长什么样
 
+下面是字段格式。`url` 必须是发布后真实存在的 zip（GitHub Releases 附件或你的静态站），不要写一个打不开的地址。
+
 ```json
 {
   "version": "0.3.0",
   "build": 21,
-  "url": "https://machands.app/downloads/MacHands-0.3.0.zip",
+  "url": "<发布后真实存在的 zip URL>",
   "sha256": "60a9c10f…",
   "sig": "6qAhL7gK…",
   "notes_zh": "…",
