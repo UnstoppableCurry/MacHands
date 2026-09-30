@@ -19,6 +19,18 @@ Claude Code、Codex、Cursor 跑在云端时，碰不到你这台机器上的 Xc
 
 每一条命令都经你同意。危险操作有黑名单；你可以随时暂停或撤销授权。
 
+## 截图与演示
+
+![一次性授权窗口](docs/media/authorize.png)
+
+一次性授权窗口。范围、系统权限和自检都在这一页完成。窗口里的「连不上中继、稍后重试」是连**自建中继**时的状态，不是公共中继地址。本仓库不发布默认中继 URL。
+
+<video src="docs/media/authorize.mp4" controls muted playsinline width="572">
+<a href="docs/media/authorize.mp4">authorize.mp4</a>
+</video>
+
+约 9 秒，同一扇授权窗口。账号邮箱已裁掉。
+
 ## 怎么拿到
 
 这个仓库就是入口。
@@ -39,19 +51,6 @@ Claude Code、Codex、Cursor 跑在云端时，碰不到你这台机器上的 Xc
 配对成功后会弹出**授权页**，只做一次：选范围（**开发者** / **只读** / **逐条审批**）→ 勾三项系统权限（通知、屏幕录制、辅助功能）→ 点 **授权并验证**。7 项自检全绿就完了。
 
 「逐条审批」时每张卡先说**代理要干什么**，原始命令收在「详情」里。`rm -rf /`、`sudo`、`diskutil erase` 这类命令在任何模式下都会被拦住。
-
-## 截图与演示
-
-真实界面应放在 [`docs/media/`](docs/media/)。仓库里目前只有**占位文件**，还没有从真机录到的画面，所以这里不贴假图。
-
-| 占位路径 | 应补上的内容 |
-|---|---|
-| `docs/media/menu-bar.png` | 菜单栏那只手 |
-| `docs/media/main-window.png` | 主窗口三步引导 |
-| `docs/media/approval-card.png` | 审批卡（先说目的） |
-| `docs/media/demo.mp4` | 从配对到「已连接」的短演示 |
-
-有真机截图或录像后，用同名文件替换 `.placeholder`，再把本节改成真正的图片 / 视频嵌入。
 
 ## 它保证什么
 
@@ -82,7 +81,7 @@ sudo sh relay/install.sh
 | [`tools/license/`](tools/license/) | 协议里的许可证令牌工具（产品本身免费，无需购买） |
 | [`site/`](site/) | 官网静态样例，不是现成的签名包 |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | 维护者发布手册 |
-| [`docs/media/`](docs/media/) | 截图与演示（现为占位） |
+| [`docs/media/`](docs/media/) | 真机授权窗口截图与短演示 |
 
 ## 构建与测试
 
@@ -132,6 +131,18 @@ Cloud agents (Claude Code, Codex, Cursor) cannot reach Xcode, simulators, Safari
 
 Every command goes through your approval. Dangerous operations are blacklisted. You can pause or revoke access at any time.
 
+### Screenshot and demo
+
+![One-time authorization window](docs/media/authorize.png)
+
+One-time authorization window. Scope, system permissions, and self-checks live on this page. The “cannot reach relay, retrying” line is the app talking to **your self-hosted relay**, not a public default. This repository does not publish a default relay URL.
+
+<video src="docs/media/authorize.mp4" controls muted playsinline width="572">
+<a href="docs/media/authorize.mp4">authorize.mp4</a>
+</video>
+
+About 9 seconds, the same window. The account email was cropped out.
+
 ### How to get it
 
 This repository is the distribution entry.
@@ -152,19 +163,6 @@ There is no Mac App Store build. The sandbox forbids arbitrary commands, input i
 After pairing, an **authorization page** appears once: pick a scope (Developer / Read-only / Ask every time) → grant Notifications, Screen Recording, and Accessibility → **Authorize & verify**. Seven self-checks should go green.
 
 In Ask mode, each card leads with **what the agent wants to do**; the raw command sits under Details. Commands like `rm -rf /`, `sudo`, and `diskutil erase` are blocked in every mode.
-
-### Screenshots and demo
-
-Real captures belong in [`docs/media/`](docs/media/). This tree currently has **placeholders only** — no live product screenshots or demo video yet, so this page does not embed fake UI.
-
-| Placeholder | Intended capture |
-|---|---|
-| `docs/media/menu-bar.png` | Menu-bar hand |
-| `docs/media/main-window.png` | Main window onboarding |
-| `docs/media/approval-card.png` | Approval card (intent first) |
-| `docs/media/demo.mp4` | Pair → Connected |
-
-Replace the `.placeholder` files with real captures of the same names, then embed them here.
 
 ### What it guarantees
 
