@@ -17,8 +17,10 @@ enum InstallGuard {
 
     /// 除自己以外的同 id 拷贝路径。按路径排序,输出稳定。
     static func duplicates() -> [String] {
+        // Store edition: do not spawn mdfind / any shell.
+        return []
         let myPath = Bundle.main.bundlePath
-        let myID = Bundle.main.bundleIdentifier ?? "app.machands.MacHands"
+        let myID = Bundle.main.bundleIdentifier ?? StoreEdition.bundleId
 
         let result = Shell.run("/usr/bin/mdfind",
                                ["kMDItemCFBundleIdentifier == '\(myID)'"],

@@ -1,65 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  MacHands.app/Contents/Info.plist 的模板。
+  MacHands.app/Contents/Info.plist template for the free Mac App Store edition.
 
-  SwiftPM 不产出 .app,所以 scripts/build-app.sh 把 .build/release/MacHands 拷进
-  MacHands.app/Contents/MacOS/,把这份文件拷进 Contents/,再用自己的参数覆写
-  身份与版本键 —— bundle 里写的东西不可能和实际构建的不一致。
+  This edition is a separate product from the MIT open-source agent bridge
+  on master (bundle id app.machands.MacHands). Display name stays MacHands.
+  Bundle id is app.machands.MacHands.store so the two apps cannot overwrite
+  each other.
 
-  关键键,以及为什么:
-
-    LSUIElement                  没有 Dock 图标、不进 ⌘-Tab:它只活在菜单栏。
-    CFBundleIdentifier           SMAppService 注册登录项用的身份,也是 codesign
-                                 盖进去的标识。
-    LSMinimumSystemVersion       13.0:SMAppService.mainApp 要 macOS 13+。
-    NSUserNotificationsUsageDescription
-                                 审批卡与配对成功都会发通知(SPEC §7.3 / §4.2)。
-    NSAppleEventsUsageDescription
-                                 `run` 里如果 agent 跑了 osascript,系统会以本 App
-                                 的名义要 Apple Events 权限;没有这条字符串,弹窗
-                                 是空白的,用户不知道谁在要什么。
-    NSAppTransportSecurity       自建中继可以是明文 ws://。
-                                 内容本身是端到端加密的(铁律 2),TLS 只是外壳;
-                                 但 ATS 默认禁止明文,不加例外 URLSession 连试都不试。
-                                 地址是用户填写的运行时值,没法按域名声明例外。
-                                 想去掉这条:给中继上证书并改用 wss://。
-
-  屏幕录制没有 Info.plist 键 —— TCC 认的是**进程**。第一次截屏时用
-  CGRequestScreenCaptureAccess() 触发系统弹窗(SPEC §7.4)。
+  No NSAllowsArbitraryLoads. No Apple Events usage string. No hosted relay.
+  Version 1.0.0 (build 1) is this edition, not the 0.3.x source release.
 -->
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>                  <string>MacHands</string>
   <key>CFBundleDisplayName</key>           <string>MacHands</string>
   <key>CFBundleExecutable</key>            <string>MacHands</string>
-  <key>CFBundleIdentifier</key>            <string>app.machands.MacHands</string>
+  <key>CFBundleIdentifier</key>            <string>app.machands.MacHands.store</string>
   <key>CFBundleInfoDictionaryVersion</key> <string>6.0</string>
   <key>CFBundlePackageType</key>           <string>APPL</string>
   <key>CFBundleSignature</key>             <string>????</string>
   <key>CFBundleIconFile</key>              <string>AppIcon</string>
-  <key>CFBundleShortVersionString</key>    <string>0.3.1</string>
-  <key>CFBundleVersion</key>               <string>31</string>
+  <key>CFBundleShortVersionString</key>    <string>1.0.0</string>
+  <key>CFBundleVersion</key>               <string>1</string>
   <key>LSMinimumSystemVersion</key>        <string>13.0</string>
   <key>LSApplicationCategoryType</key>     <string>public.app-category.developer-tools</string>
   <key>LSUIElement</key>                   <true/>
   <key>NSPrincipalClass</key>              <string>NSApplication</string>
   <key>NSHighResolutionCapable</key>       <true/>
   <key>NSSupportsSuddenTermination</key>   <false/>
-  <key>NSHumanReadableCopyright</key>      <string>MacHands. Distributed as-is, no warranty.</string>
-  <key>CFBundleDevelopmentRegion</key>     <string>zh-Hans</string>
-  <key>NSUserNotificationsUsageDescription</key>
-  <string>MacHands 会在 agent 请求执行命令、以及有新 agent 接入时通知你。</string>
-  <key>NSAppleEventsUsageDescription</key>
-  <string>agent 请求执行的命令可能会驱动其它 App(例如 osascript)。每一条都会先问过你。</string>
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSAllowsArbitraryLoads</key>      <true/>
-  </dict>
+  <key>NSHumanReadableCopyright</key>      <string>Free App Store edition of MacHands. The full open-source agent bridge is https://github.com/UnstoppableCurry/MacHands — not the same binary.</string>
+  <key>CFBundleGetInfoString</key>         <string>MacHands 1.0.0, Free App Store edition. Not the open-source agent bridge.</string>
+  <key>CFBundleDevelopmentRegion</key>     <string>en</string>
   <key>CFBundleLocalizations</key>
   <array>
-    <string>zh-Hans</string>
     <string>en</string>
+    <string>zh-Hans</string>
   </array>
 </dict>
 </plist>

@@ -79,9 +79,8 @@ struct Settings: Codable, Equatable {
     var seenWelcome: Bool
     /// SPEC §2:中继的 Ed25519 公钥,首次连接就 pin;以后对不上直接拒。
     var pinnedRelayKey: String
-    /// 界面语言:"auto"(跟系统,不认识的语言落到英文)或 `Lang.rawValue`
-    /// (zh/en/ja/ko/…)。改了要重启才生效——Strings 只在启动时解析一次,
-    /// 不追求运行时热切换,换来的是不用给每个视图都接一根"语言变了请重画"的线。
+    /// UI language: `en` (default), `zh`, or `auto` (follow the system; unknown → English).
+    /// A change takes effect on the next launch.
     var language: String
     /// SPEC §10.2:用户点过「授权并验证」的时刻(毫秒)。nil = 还没做过一次授权。
     var authorizedAt: Double?
@@ -104,7 +103,7 @@ struct Settings: Codable, Equatable {
                         license: "",
                         seenWelcome: false,
                         pinnedRelayKey: "",
-                        language: "auto",
+                        language: "en",
                         authorizedAt: nil,
                         autoUpdate: true,
                         lastUpdateCheck: nil,
@@ -142,7 +141,7 @@ struct Settings: Codable, Equatable {
         license = try c.decodeIfPresent(String.self, forKey: .license) ?? ""
         seenWelcome = try c.decodeIfPresent(Bool.self, forKey: .seenWelcome) ?? false
         pinnedRelayKey = try c.decodeIfPresent(String.self, forKey: .pinnedRelayKey) ?? ""
-        language = try c.decodeIfPresent(String.self, forKey: .language) ?? "auto"
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? "en"
         authorizedAt = try c.decodeIfPresent(Double.self, forKey: .authorizedAt)
         autoUpdate = try c.decodeIfPresent(Bool.self, forKey: .autoUpdate) ?? true
         lastUpdateCheck = try c.decodeIfPresent(Double.self, forKey: .lastUpdateCheck)

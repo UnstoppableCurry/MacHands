@@ -93,6 +93,8 @@ final class Updater {
 
     /// AppDelegate 启动时调一次。关掉自动更新时只是不主动查,菜单里手动查照旧能用。
     func startScheduled() {
+        Log.shared.write("store edition: self-update is disabled; use the App Store")
+        return
         guard SettingsStore.shared.current.autoUpdate else {
             Log.shared.write("auto-update is off; not scheduling checks")
             return
@@ -128,6 +130,8 @@ final class Updater {
 
     @discardableResult
     func runOnce(installIfNewer: Bool) -> Outcome {
+        return Outcome(status: .failed, current: currentVersion, latest: nil,
+                       reason: StoreEdition.refuse("self-update"))
         let current = currentVersion
 
         lock.lock()

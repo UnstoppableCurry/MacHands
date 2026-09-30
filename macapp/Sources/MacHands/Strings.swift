@@ -1,10 +1,7 @@
 import Foundation
 
-/// 铁律 3:任何面向用户的字符串走 i18n。逻辑里不写裸中文,只写 key。
-/// 语言:zh(简体中文)/ en(English)/ ja(日本語)/ ko(한국어)。
-/// 跟系统语言走,认不出的语言落到 **en**(不是 zh——这是面向全球卖的商业软件,
-/// 中文只是我们自己团队的源语言,不该是陌生语言用户看到的兜底)。
-/// 用户也可以在设置里手动选;选完要重启才生效,见 Settings.language 上的注释。
+/// User-facing strings. English is the development language and the default.
+/// Chinese remains as a localization. Unknown languages fall back to English.
 enum Lang: String {
     case zh
     case en
@@ -54,10 +51,68 @@ struct Strings {
         // --- app ------------------------------------------------------------
         "app.name": ["zh": "MacHands", "en": "MacHands", "ja": "MacHands", "ko": "MacHands"],
         "app.tagline": [
-            "zh": "给你的云端 AI 代理一双 Mac 上的手,每一下都经你同意。",
-            "en": "Hands on your Mac for your cloud AI agent — every move needs your yes.",
-            "ja": "クラウドの AI エージェントに、あなたの Mac を操る手を。ひとつひとつ、あなたの許可のもとで。",
-            "ko": "클라우드 AI 에이전트에게 당신의 Mac을 다룰 손을 빌려주세요. 모든 동작은 당신의 승인이 필요합니다."],
+            "zh": "MacHands 的免费 App Store 版。完整的开源 agent 桥在 GitHub，不是同一个二进制。",
+            "en": "Free App Store edition of MacHands. The full open-source agent bridge is on GitHub — not the same binary.",
+            "ja": "MacHands の無料 App Store 版。完全なオープンソースのエージェント橋は GitHub にあります。同じバイナリではありません。",
+            "ko": "MacHands의 무료 App Store 버전입니다. 전체 오픈소스 에이전트 브리지는 GitHub에 있으며, 같은 바이너리가 아닙니다."],
+
+        "store.pill": [
+            "zh": "免费 App Store 版",
+            "en": "Free App Store edition"],
+        "store.lead": [
+            "zh": "这是 MacHands 的免费 Mac App Store 版，在 App Sandbox 里运行。它不是 GitHub 上的 MIT 开源 agent 桥，也不是同一个二进制。完整能力请用 https://github.com/UnstoppableCurry/MacHands",
+            "en": "This is the free Mac App Store edition of MacHands. It runs inside the App Sandbox. It is not the MIT open-source agent bridge, and it is not the same binary. The full project is https://github.com/UnstoppableCurry/MacHands"],
+        "store.about.title": [
+            "zh": "这是什么",
+            "en": "What this is"],
+        "store.about.body": [
+            "zh": "菜单栏里的一只手，加上这份说明。显示名仍是 MacHands，bundle id 是 app.machands.MacHands.store，不会覆盖开源版（app.machands.MacHands）。免费，没有内购，没有许可证服务器，没有 $49。",
+            "en": "A menu-bar companion and this guide. The display name is still MacHands. The bundle id is app.machands.MacHands.store, so it cannot overwrite the open-source app (app.machands.MacHands). It is free: no in-app purchases, no licence server, no $49."],
+        "store.can.title": [
+            "zh": "这个版本能做什么",
+            "en": "What this edition can do"],
+        "store.can.body": [
+            "zh": "打开主窗口与设置；复制 GitHub 地址和 clone 命令；在浏览器里打开开源项目；选择英语或中文；开机启动。不会连任何托管中继，也不会执行命令。",
+            "en": "Open the window and Settings, copy the GitHub URL and clone command, open the open-source project in your browser, pick English or Chinese, and open at login. It does not connect to a hosted relay and it does not run commands."],
+        "store.cannot.title": [
+            "zh": "沙盒里做不到的（已关闭，不是假装能用）",
+            "en": "Disabled here — the sandbox cannot do these"],
+        "store.cannot.body": [
+            "zh": "任意 shell / osascript / Apple Events、自建或托管中继、agent 配对、CLI / MCP、截屏与键鼠注入、读写沙盒外的文件。需要这些请用 GitHub 上的开源 agent 桥，不要把两个产品当成同一个 App。",
+            "en": "Arbitrary shell, osascript, and Apple Events; any relay (self-hosted or hosted); agent pairing; CLI / MCP; screen capture and input injection; reading or writing files outside the sandbox. For those, use the open-source agent bridge on GitHub. Do not treat the two products as the same app."],
+        "store.openGitHub": [
+            "zh": "在浏览器打开开源项目",
+            "en": "Open the open-source project"],
+        "store.copyGitHub": [
+            "zh": "复制 GitHub 地址",
+            "en": "Copy the GitHub URL"],
+        "store.copyClone": [
+            "zh": "复制 clone 命令",
+            "en": "Copy the clone command"],
+        "store.copiedGitHub": [
+            "zh": "已复制 GitHub 地址。",
+            "en": "Copied the GitHub URL."],
+        "store.copiedClone": [
+            "zh": "已复制 git clone 命令。",
+            "en": "Copied the git clone command."],
+        "store.footer": [
+            "zh": "免费 App Store 版 1.0.0（build 1）· 不是 DataDance，不是 MacDisk · 完整 agent 桥：github.com/UnstoppableCurry/MacHands",
+            "en": "Free App Store edition 1.0.0 (build 1) · not DataDance, not MacDisk · full agent bridge: github.com/UnstoppableCurry/MacHands"],
+        "store.menu.status": [
+            "zh": "MacHands · 免费 App Store 版",
+            "en": "MacHands · Free App Store edition"],
+        "store.menu.notAgent": [
+            "zh": "不是开源 agent 桥，不能配对或执行命令",
+            "en": "Not the agent bridge — pairing and commands are off"],
+        "store.menu.openGitHub": [
+            "zh": "打开 GitHub 上的开源项目…",
+            "en": "Open the GitHub project…"],
+        "store.menu.copyGitHub": [
+            "zh": "复制 GitHub 地址",
+            "en": "Copy the GitHub URL"],
+        "store.settings.about": [
+            "zh": "此设置只作用于免费 App Store 版。改语言后需要重启。完整的中继、审批和许可证界面不在这个产品里。",
+            "en": "These settings apply only to the free App Store edition. Restart after changing the language. Relay, approval, and licence screens are not part of this product."],
         "value.unknown": ["zh": "—", "en": "—", "ja": "—", "ko": "—"],
 
         // --- 菜单栏 (SPEC §7.1) -----------------------------------------------

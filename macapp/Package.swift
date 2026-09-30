@@ -1,7 +1,8 @@
 // swift-tools-version:5.9
 import PackageDescription
 
-// MacHands — 菜单栏 App。
+// MacHands — free App Store edition (app.machands.MacHands.store).
+// Separate product from the MIT agent bridge on master. Do not merge back.
 //
 // 分成两个 target:
 //   MacHandsCore  纯 Foundation/CryptoKit/Security,不碰 AppKit —— 协议层与加密层,

@@ -107,6 +107,9 @@ done
 # =========================================================================== #
 step "1/6 预检"
 
+die 2 "This branch is the free Mac App Store edition (app.machands.MacHands.store)." \
+  "Do not notarize, do not create a Developer ID release, and do not merge this branch into master. See APPSTORE.md."
+
 [ "$(uname -s)" = "Darwin" ] || die 3 "发布流程只能在 Mac 上跑(uname -s = $(uname -s))。" \
   "把仓库拷到 Mac 上:cd macapp && ./scripts/release.sh …"
 command -v xcrun >/dev/null 2>&1 || die 5 "没有 xcrun。" "装 Xcode 命令行工具:xcode-select --install"
