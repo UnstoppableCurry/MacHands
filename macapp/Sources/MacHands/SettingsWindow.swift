@@ -75,7 +75,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         guard let window = self.window else { return }
         let width = SettingsWindowController.bodyWidth
 
-        relayField.placeholderString = Settings.defaultRelayURL
+        relayField.placeholderString = "ws://1.2.3.4:8443"
         relayField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         relayHint.stringValue = L("settings.relayHint")
         relayHint.font = NSFont.systemFont(ofSize: 11)

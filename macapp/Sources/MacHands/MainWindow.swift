@@ -92,7 +92,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     private let launchSwitch = NSSwitch()
 
     // --- 自建中继引导卡(0.3.3)---------------------------------------------
-    // 内测版没有默认中继,用户装完第一件事就是把自己那台跑起来。
+    // 没有默认中继,用户装完第一件事就是把自己那台跑起来。
     // 这张卡是主窗口在「还没连上中继」时的全部内容:三步,每步一句话,
     // 命令给一颗复制按钮 —— 让人去别处翻文档,一半人就在这儿掉队了。
     private let setupCard = CardView()
@@ -689,7 +689,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         }
 
         // --- 还没有中继:整扇窗只讲一件事 ------------------------------------
-        // 内测版不带默认中继(Settings.defaultRelayURL 为空),所以装完第一屏
+        // 不带默认中继(Settings.defaultRelayURL 为空),所以装完第一屏
         // 必然走到这里。在中继连上之前把「复制给 agent」藏掉 —— 那颗按钮点了
         // 也只会失败(copyPairingBlock 要求中继在线),让人白点一次不如不给点。
         let relayOnline: Bool

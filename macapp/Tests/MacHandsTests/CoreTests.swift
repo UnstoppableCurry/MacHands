@@ -249,14 +249,14 @@ final class E2ETests: XCTestCase {
 
 final class PairingCodeTests: XCTestCase {
 
-    private let sample = "MH1.134.199.230.126:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8"
+    private let sample = "MH1.192.0.2.1:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8"
         + ".4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q"
         + ".ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ"
         + ".S2FpIOeahCBNYWNCb29rIFBybw"
 
     func testParsesAnIPv4EndpointWithDots() throws {
         let code = try XCTUnwrap(PairingCode.parse(sample))
-        XCTAssertEqual(code.relayEndpoint, "134.199.230.126:8443")
+        XCTAssertEqual(code.relayEndpoint, "192.0.2.1:8443")
         XCTAssertEqual(code.relayPublicKey, "G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8")
         XCTAssertEqual(code.macId, "4bpiqf23o63l7kxs5wymtlez4m")
         XCTAssertEqual(code.macXPublicKey, "zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q")

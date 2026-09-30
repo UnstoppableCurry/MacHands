@@ -4,7 +4,7 @@
 
 | 部件 | 状态 | 验证 |
 |---|---|---|
-| 中继 `relay/` | 已部署在 134.199.230.126:8443,systemd 开机自启,用户 `machands`,数据在 `/opt/machands/relay/data` | `curl http://134.199.230.126:8443/health` |
+| 中继 `relay/` | 只走自建。部署说明见 `relay/README.md`,`sudo sh relay/install.sh` | `curl http://127.0.0.1:8443/health` |
 | agent CLI + MCP `agent/` | 完成 | `node --test relay/test agent/test` 60/60;真中继上 假 Mac → pair → run 闭环 |
 | Mac App `macapp/` | 完成,在 MacBook Air(macOS 26.3.1,Xcode 26.2)一次编译通过 | `swift test` 66/66(含与 Node 的加密互通向量);`/Applications/MacHands.app` 已装、已连上中继 |
 | 许可证 | 签发公钥已编进 App;私钥在服务器 `/root/.machands-license/key.json`(不在仓库) | `node tools/license/sign.mjs` / `verify.mjs` |
@@ -31,7 +31,7 @@
 Claude Code 接入:`claude mcp add machands -- npx -y machands mcp`(包已发布,不必再用仓库路径)。
 
 
-## 真机联调记录(2026-09-03,MacBook Air + 托管中继 + 本服务器作为 agent)
+## 真机联调记录(2026-09-03,MacBook Air + 自建中继 + 本服务器作为 agent)
 
 | 步骤 | 结果 |
 |---|---|
@@ -102,13 +102,13 @@ MacHands 已按 [MIT](LICENSE) 开源，**没有付费档，也不卖许可证**
 | 项 | 状态 |
 |---|---|
 | Intel/Apple Silicon 通用二进制 | **已验证**:`swift build -c release --arch arm64 --arch x86_64` 在你的 Mac 上编译成功,`lipo -archs` 输出 `x86_64 arm64`。`build-app.sh` 早就支持 `--universal` 参数,以后打包默认加上就行。 |
-| 官网 | **已上线**:`http://134.199.230.126/`(nginx,本服务器)。深色开发者工具风格,含 Hero/使用三步/审批卡演示/功能网格/对比表/定价/邮件占位/FAQ/合规免责声明。因为没有域名,暂时是 IP 直连 HTTP,浏览器会显示"不安全"——见下方"你要做的事"。 |
+| 官网 | 对外说明用 <https://machands.pages.dev>。本仓库不发布公共托管中继地址。 |
 | 邮件收集 | **已上线**:`/api/waitlist`(systemd 服务 `machands-waitlist`,数据在 `/opt/machands/site/data/waitlist.json`),因为收款渠道还没开,首页"Get MacHands"暂时收邮件占位下载入口。 |
 | Developer ID 证书 / 公证 / npm 发布 | **仍然卡住,只有你能做**。我试了用 GUI 自动化在 Xcode 里自己点「Manage Certificates → + → Developer ID Application」,但这需要你先手动批准一次"辅助功能"权限,而且这一步涉及 Apple 账号的信任操作,我判断不该在你正开着其它工作的桌面上盲点鼠标,已停手。npm 发布同理:`npm login` 大概率要走一次性验证码,只有你本人能过。 |
 
 ### 你要做的事(按优先级)
 
-1. **(可选但强烈建议)买个域名**,比如 `machands.app` 或 `machands.dev`(Namecheap/Cloudflare 约 12-20 美元/年)。买完把域名的 A 记录指向 `134.199.230.126`,告诉我域名,我十分钟内配好 Let's Encrypt 证书,官网就有真正的绿锁小锁头,商业观感完全不同。我没有支付方式,这一步只能你来。
+1. 对外官网用 <https://machands.pages.dev>。中继只走自建,见 `relay/README.md`。
 2. **Developer ID 证书**:打开 Xcode → 设置(⌘,)→ Accounts → 选中你的账号 → Manage Certificates → 左下角「+」→ Developer ID Application。做完后回我,我立刻用它重编译签名并生成正式 DMG。
 3. **公证凭据**:App Store Connect 生成一个"App 专用密码",在 Mac 终端跑一次:
    `xcrun notarytool store-credentials machands-notary --apple-id <你的 Apple ID 邮箱> --team-id <上一步看到的 TEAMID> --password <App 专用密码>`

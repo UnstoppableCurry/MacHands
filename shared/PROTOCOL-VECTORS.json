@@ -180,9 +180,9 @@
     }
   ],
   "pairing": {
-    "code": "MH1.134.199.230.126:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw",
+    "code": "MH1.192.0.2.1:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw",
     "decoded": {
-      "host": "134.199.230.126",
+      "host": "192.0.2.1",
       "port": 8443,
       "relayPub": "G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8",
       "macId": "4bpiqf23o63l7kxs5wymtlez4m",
@@ -192,6 +192,6 @@
       "macName": "Kai 的 MacBook Pro"
     },
     "token_ttl_seconds": 600,
-    "clipboard_block": "把下面这一行在你的机器上执行,然后告诉我结果:\n\nnpx -y machands@latest pair \"MH1.134.199.230.126:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw\"\n\n(这是 MacHands 配对码,10 分钟内有效,只能用一次。)\n"
+    "clipboard_block": "把下面这一行在你的机器上执行,然后告诉我结果:\n\nnpx -y machands@latest pair \"MH1.192.0.2.1:8443.G5A1eDQKxxk1mehRdGnTdLhBmYgheh59KBvHdUARcj8.4bpiqf23o63l7kxs5wymtlez4m.zwvRgLscGS8vzoWT8pkknM4gipvItdRJvqzv6SszG0Q.ZyITyl0aUSokgAbzMF3LPVGnwzY5BlcxBqhZDg1Ylhk.bWFjaGFuZHMtdG9rZW4wMQ.S2FpIOeahCBNYWNCb29rIFBybw\"\n\n(这是 MacHands 配对码,10 分钟内有效,只能用一次。)\n"
   }
 }

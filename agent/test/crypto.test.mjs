@@ -97,7 +97,7 @@ test('id 是 26 个字符的小写 base32', () => {
 test('向量:配对码解出来和登记的一致', () => {
   const p = C.parsePairingCode(V.pairing.code)
   assert.deepEqual(p, V.pairing.decoded)
-  assert.equal(p.host, '134.199.230.126') // 主机名里带点也要解得对
+  assert.equal(p.host, '192.0.2.1') // 主机名里带点也要解得对
   assert.equal(p.port, 8443)
   assert.equal(p.macName, V.mac.name)
   assert.equal(p.macId, V.mac.id)

@@ -7,7 +7,7 @@ import Foundation
 /// 坑:字段用 `.` 分隔,而 `<relayHost>:<port>` 里的 IPv4 本身就带 3 个点,
 /// 所以从左往右 split 会散架。解析改成从**右**边数 6 个字段(它们都是
 /// base64url / base32,不含点),剩下的开头部分就是 host:port。
-/// 这样 `134.199.230.126:8443` 与 `relay.example.com:443` 都能正确还原。
+/// 这样 `192.0.2.1:8443` 与 `relay.example.com:443` 都能正确还原。
 public struct PairingCode: Equatable {
 
     public static let prefix = "MH1"
