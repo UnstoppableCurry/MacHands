@@ -93,6 +93,8 @@ enum Shell {
                     standardInput: String? = nil,
                     timeout: TimeInterval = 20) -> CommandResult {
 
+        return CommandResult(status: -1, stdout: "", stderr: "", timedOut: false,
+                             launchError: StoreEdition.refuse(executable))
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments

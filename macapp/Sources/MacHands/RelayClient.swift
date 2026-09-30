@@ -74,6 +74,11 @@ final class RelayClient {
     // MARK: - 生命周期
 
     func start() {
+        Log.shared.write("store edition: relay is disabled")
+        DispatchQueue.main.async { [weak self] in
+            self?.onStateChange?(.failed(StoreEdition.refuse("relay")))
+        }
+        return
         queue.async { [weak self] in
             guard let self = self else { return }
             self.wantsConnection = true

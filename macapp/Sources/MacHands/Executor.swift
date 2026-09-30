@@ -87,6 +87,9 @@ final class Executor {
     // MARK: - 入口
 
     func handle(_ request: RPCRequest, agent: AgentContext, emit: @escaping Emit) {
+        // Store edition: never run shell, files, screen, input, or jobs.
+        emit(RPCOutbound.fail(request.id, .eio, StoreEdition.refuse(request.method)))
+        return
         let subject = PolicyEngine.subject(method: request.method, params: request.params)
         let decision = policy.decide(agentId: agent.id, method: request.method, subject: subject)
         // 一条请求"想干什么"。审批卡、审计日志、菜单栏都用它,而不是原始 shell。

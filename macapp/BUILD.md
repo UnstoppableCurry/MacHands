@@ -91,5 +91,5 @@ Gatekeeper 到底放不放行。每一步都会打印它在干什么;失败会�
 ## entitlements 说明
 
 `Resources/MacHands.entitlements` 里**不能写 XML 注释**(codesign 用的 AMFI 解析器会报 `AMFIUnserializeXML: syntax error`)。
-它只有一条 `com.apple.security.automation.apple-events`;**没有 App Sandbox**,这是有意的:App 要替 agent 在用户
-自己的 Mac 上跑任意命令、读写任意路径、截屏,沙箱化的版本一件都做不了,所以也不会有 Mac App Store 版本。
+
+**This branch (`appstore/free-en`) is the free Mac App Store edition.** The entitlements file enables **only** `com.apple.security.app-sandbox`. There is no Apple Events entitlement, no network client entitlement, and no `NSAllowsArbitraryLoads`. Features that cannot run inside the sandbox are disabled in the UI. Do not merge this branch into `master`. See [`APPSTORE.md`](../APPSTORE.md).

@@ -29,7 +29,7 @@ RES_DIR="$APP_DIR/Resources"
 
 PRODUCT="MacHands"
 APP_NAME="MacHands"
-BUNDLE_ID="app.machands.MacHands"
+BUNDLE_ID="app.machands.MacHands.store"
 MIN_MACOS="13.0"
 OUT_DIR="$APP_DIR/dist"
 VERSION=""
@@ -79,9 +79,8 @@ usage() {
                      (Sources/MacHands/DebugPreview.swift),只给改界面时看效果用
   --scratch DIR      SwiftPM 的 --scratch-path。几个 worktree 并行编译时各用各的,
                      不然会在同一个 .build 里互相踩
-  --bundle-id ID     CFBundleIdentifier 与签名标识(默认 app.machands.MacHands)。
-                     跟正式版并排跑的开发副本要换一个(比如 app.machands.MacHands.dev):
-                     同一个 id 的两份 App 会在 TCC 里撞条目,把正式版的授权搅乱
+  --bundle-id ID     CFBundleIdentifier 与签名标识(默认 app.machands.MacHands.store)。
+                     这个分支是免费 App Store 版,不要改回 app.machands.MacHands。
   -h, --help
 EOF
 }
@@ -132,13 +131,13 @@ info "macOS $(sw_vers -productVersion 2>/dev/null || echo '?') · $(swift --vers
 # --------------------------------------------------------------------------- #
 if [ -z "$VERSION" ]; then
   if [ -f "$APP_DIR/VERSION" ]; then VERSION=$(tr -d ' \t\n\r' < "$APP_DIR/VERSION"); fi
-  [ -n "$VERSION" ] || VERSION="0.1.0"
+  [ -n "$VERSION" ] || VERSION="1.0.0"
 fi
 case "$VERSION" in
   *[!0-9.]*|""|.*|*.) die 2 "--version 要长得像 1.2.3(拿到的是 '$VERSION')" ;;
 esac
 if [ -z "$BUILD_NUM" ]; then
-  BUILD_NUM=$(git -C "$APP_DIR" rev-list --count HEAD 2>/dev/null || true)
+  if [ -f "$APP_DIR/BUILD" ]; then BUILD_NUM=$(tr -d ' \t\n\r' < "$APP_DIR/BUILD"); fi
   [ -n "$BUILD_NUM" ] || BUILD_NUM=1
 fi
 
@@ -287,8 +286,9 @@ if [ "$DO_SIGN" = 1 ]; then
   if [ "$SIGN_ID" = "-" ]; then
     step "签名(ad-hoc)"
     info "只在这台 Mac 上有效。别的 Mac 上 Gatekeeper 仍然会说「未识别的开发者」。"
-    codesign --force --sign - --identifier "$BUNDLE_ID" "$NEW" \
-      || die 4 "ad-hoc 签名失败" "试:xattr -cr '$NEW' && codesign --force --sign - '$NEW'"
+    ENT="$RES_DIR/MacHands.entitlements"
+    codesign --force --sign - --identifier "$BUNDLE_ID" --entitlements "$ENT" "$NEW" \
+      || die 4 "ad-hoc 签名失败" "试:xattr -cr '$NEW' && codesign --force --sign - --entitlements '$ENT' '$NEW'"
   else
     step "签名:$SIGN_ID"
     SIGN_ARGS=(--force --options runtime --timestamp --sign "$SIGN_ID" --identifier "$BUNDLE_ID")

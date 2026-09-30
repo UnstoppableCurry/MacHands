@@ -1,3 +1,6 @@
+> **This branch is the free Mac App Store edition. Do not merge it into `master`.**
+> It is a separate product from the MIT open-source agent bridge. See [`APPSTORE.md`](APPSTORE.md).
+
 English | [中文](README.zh-CN.md)
 
 # MacHands

@@ -1,3 +1,6 @@
+> **本分支是免费 Mac App Store 版，禁止合入 `master`。**
+> 它和 MIT 开源 agent 桥是两个产品。说明见 [`APPSTORE.md`](APPSTORE.md)。
+
 [English](README.md) | 中文
 
 # MacHands
