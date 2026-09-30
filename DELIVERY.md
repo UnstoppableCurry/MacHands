@@ -82,12 +82,9 @@ cd ~/machands/macapp
 ```
 产物:`dist/MacHands-0.1.0.dmg`(已签名、已公证、已 staple)。放到下载页即可。
 
-## 售卖
+## 许可（产品本身免费）
 
-- 定价建议:49 美元买断含一年更新;7 天试用内置。
-- 签发许可证:`node tools/license/sign.mjs --key /root/.machands-license/key.json --email 买家邮箱 --seats 1`(永久)或加 `--exp 2027-09-03`。
-  Lemon Squeezy / Paddle 的 webhook 收到订单后调这条命令并邮件发给买家;v1 可以手动。
-- 用户在 MacHands 设置窗口粘贴 `MHL1.…` 即可。
+MacHands 已按 [MIT](LICENSE) 开源，**没有付费档，也不卖许可证**。`tools/license/` 是协议里留下的令牌签发 / 校验工具，不是收费入口。
 
 ## 已知边界(写进产品说明,不要藏)
 
@@ -116,7 +113,7 @@ cd ~/machands/macapp
 3. **公证凭据**:App Store Connect 生成一个"App 专用密码",在 Mac 终端跑一次:
    `xcrun notarytool store-credentials machands-notary --apple-id <你的 Apple ID 邮箱> --team-id <上一步看到的 TEAMID> --password <App 专用密码>`
 4. **npm 账号**:如果你还没有,`npm adduser` 注册一个(建议用户名 `machands` 或你自己的);做完告诉我账号名,我来发布 `agent/` 那个包。
-5. 做完 2、3 后回我一句,我会自动跑 `release.sh` 出正式 DMG,放到官网 `/dl/` 下,把首页"Get MacHands"从收邮件切换成真下载,再帮你在 Lemon Squeezy 或 Paddle 建店铺收款(那两家的开店本身需要你自己的身份/银行信息,我没法代劳,但页面文案、产品配置我可以先写好)。
+5. 做完 2、3 后回我一句,我会自动跑 `release.sh` 出正式包。产品现已按 MIT 开源、完全免费,不再建收费店铺。
 
 ---
 
@@ -205,7 +202,7 @@ cd ~/machands/macapp
 | `macapp/scripts/make-appcast.sh`(新) | sha256 + Ed25519 签名 → `appcast.json`;签完自验,不过就不出文件 |
 | `macapp/scripts/keygen-release.sh`(新) | 一次性生成发布密钥,私钥 600 存 `~/.machands/`,只打印公钥 |
 | `macapp/scripts/build-app.sh` | 加 `--hardened-runtime`;签完打印**指定要求**,让"会不会掉权限"当场看得见 |
-| `site/download.html`(新) | 官网下载页,中英双语,零外部依赖,自己读 `appcast.json` 显示最新版 |
+| `site/download.html`(新) | 官网样例页,中英双语,零外部依赖;指向仓库与官网,不提供虚构的签名包下载 |
 | `site/appcast.json`(新) | 样例(用测试密钥生成,发布时被真的覆盖) |
 | `docs/RELEASE.md`(新) | 发布手册,含"只有你能做"的三步 |
 | `SPEC.md` §15 | appcast 字段表、校验链、原地替换规则、版本协商、v0.3 验收 |
