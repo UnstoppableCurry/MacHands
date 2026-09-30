@@ -99,7 +99,7 @@ struct Strings {
                       "ja": "エージェント用にコピー", "ko": "에이전트용으로 복사"],
 
         // --- 自建中继引导(0.3.3) -------------------------------------------
-        // 内测版没有默认中继:用户必须先把自己的那台跑起来。
+        // 没有默认中继:用户必须先把自己的那台跑起来。
         // 这几条是主窗口上那张引导卡,顺序即步骤。
         "setup.title": ["zh": "先设置你自己的中继(三步)", "en": "Set up your own relay (3 steps)",
                         "ja": "自分のリレーを用意する(3 ステップ)", "ko": "내 릴레이 설정하기 (3단계)"],
@@ -249,10 +249,10 @@ struct Strings {
                            "ja": "MacHands 設定", "ko": "MacHands 설정"],
         "settings.relay": ["zh": "中继地址", "en": "Relay address", "ja": "リレーアドレス", "ko": "릴레이 주소"],
         "settings.relayHint": [
-            "zh": "改了要重连。留空恢复默认。",
-            "en": "Changing this reconnects. Empty restores the default.",
-            "ja": "変更すると再接続します。空欄にすると既定値に戻ります。",
-            "ko": "변경하면 다시 연결됩니다. 비워두면 기본값으로 돌아갑니다."],
+            "zh": "改了要重连。必须填你自己自建的地址,没有默认中继。",
+            "en": "Changing this reconnects. Set your own self-hosted relay; there is no default.",
+            "ja": "変更すると再接続します。自分で立てたリレーを入力してください。既定のリレーはありません。",
+            "ko": "변경하면 다시 연결됩니다. 직접 띄운 릴레이 주소를 넣으세요. 기본 릴레이는 없습니다."],
         "settings.agents": ["zh": "已授权的 agent", "en": "Authorised agents",
                             "ja": "承認済みのエージェント", "ko": "승인된 에이전트"],
         "settings.noAgents": ["zh": "还没有。", "en": "None yet.", "ja": "まだありません。", "ko": "아직 없습니다."],

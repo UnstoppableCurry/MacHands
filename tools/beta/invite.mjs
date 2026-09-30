@@ -24,7 +24,7 @@ import { unb64u } from '../../agent/src/crypto.mjs'
 const KEY = process.env.MACHANDS_LICENSE_KEY || '/root/.machands-license/key.json'
 const WEBROOT = process.env.MACHANDS_WEBROOT || '/var/www/machands'
 const LEDGER = process.env.MACHANDS_BETA_LEDGER || '/opt/machands/beta/invites.jsonl'
-const SITE = process.env.MACHANDS_SITE || 'https://134.199.230.126.nip.io'
+const SITE = process.env.MACHANDS_SITE
 // 内测发的包。要跟着版本走,别写死在别处。
 const ASSET = process.env.MACHANDS_BETA_ASSET || 'MacHands-0.3.2.zip'
 
@@ -96,6 +96,10 @@ function cmdRevoke(email) {
 }
 
 function cmdInvite(email, days) {
+  if (!SITE) {
+    console.error('请设置 MACHANDS_SITE(你自己的站点根 URL)。没有默认公共地址。')
+    return 2
+  }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     console.error(`--email 看着不像邮箱:${email}`)
     return 2
@@ -171,7 +175,8 @@ const USAGE = `内测邀请
   node tools/beta/invite.mjs --revoke <邮箱>              删掉他的下载链接
 
   环境变量:MACHANDS_BETA_ASSET(发哪个包,默认 ${ASSET})
-           MACHANDS_SITE / MACHANDS_WEBROOT / MACHANDS_LICENSE_KEY / MACHANDS_BETA_LEDGER`
+           MACHANDS_SITE(必填,你自己的站点根 URL,没有默认值)
+           MACHANDS_WEBROOT / MACHANDS_LICENSE_KEY / MACHANDS_BETA_LEDGER`
 
 export function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv)

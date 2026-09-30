@@ -107,7 +107,7 @@ const nonce2 = C.b64u(Buffer.from('fedcba9876543210fedcba9876543210', 'utf8'))
 
 const pairingToken = C.b64u(Buffer.from('machands-token01', 'utf8'))
 const pairing_code = C.encodePairingCode({
-  host: '134.199.230.126',
+  host: '192.0.2.1',
   port: 8443,
   relayPub: C.b64u(relayEd.pub),
   macId,

@@ -51,7 +51,7 @@ enum DebugPreview {
 
     static let fakeAgentId = "2vyy5n6gpreviewagent0000"
     static let fakeAgentName = "Claude Code"
-    static let fakeIP = "134.199.230.126"
+    static let fakeIP = "192.0.2.1"
 
     static func requests(_ kind: Approval) -> [ApprovalRequest] {
         func make(_ id: String, _ method: String, _ subject: String, cwd: String?) -> ApprovalRequest {

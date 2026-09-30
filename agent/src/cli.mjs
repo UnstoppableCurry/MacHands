@@ -1457,11 +1457,7 @@ export async function cmdShow(args) {
 
 // ---------- relay(自建中继) ----------
 //
-// SPEC §1 一开始就写了中继「我们托管;可自建」。但自建这条路以前是断的:
-// relay/server.mjs 只在私有仓库里,README 第一句是 `git clone <仓库>`,
-// 内测用户照着做第一步就卡死。
-//
-// 所以实现挪进了 src/relay-server.mjs —— 和 CLI 同一个 npm 包。用户
+// 中继只走自建。实现在 src/relay-server.mjs,和 CLI 同一个 npm 包。
 // `npm i -g machands` 之后 VPS 上直接就有中继,不用拿到仓库权限。
 export async function cmdRelay(args) {
   const sub = args._.shift() || 'start'

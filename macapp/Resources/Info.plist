@@ -19,10 +19,10 @@
                                  `run` 里如果 agent 跑了 osascript,系统会以本 App
                                  的名义要 Apple Events 权限;没有这条字符串,弹窗
                                  是空白的,用户不知道谁在要什么。
-    NSAppTransportSecurity       中继默认是明文 `ws://134.199.230.126:8443`。
+    NSAppTransportSecurity       自建中继可以是明文 ws://。
                                  内容本身是端到端加密的(铁律 2),TLS 只是外壳;
                                  但 ATS 默认禁止明文,不加例外 URLSession 连试都不试。
-                                 地址是用户可改的运行时值,没法按域名声明例外。
+                                 地址是用户填写的运行时值,没法按域名声明例外。
                                  想去掉这条:给中继上证书并改用 wss://。
 
   屏幕录制没有 Info.plist 键 —— TCC 认的是**进程**。第一次截屏时用

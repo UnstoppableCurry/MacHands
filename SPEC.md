@@ -31,7 +31,7 @@
 |---|---|---|---|
 | **App** | `macapp/` | Swift 5.9,SwiftPM,AppKit 菜单栏 | 用户的 Mac |
 | **Agent CLI** | `agent/` | Node ESM,npm 包名 `machands` | 云端 agent 所在机器(VPS、Claude Code 网页沙箱、CI) |
-| **Relay** | `relay/` | Node ESM | 我们托管(v1:134.199.230.126:8443);可自建 |
+| **Relay** | `relay/` | Node ESM | 用户自建 |
 
 传输:全部 WebSocket。Relay 监听 `ws://0.0.0.0:8443`(有域名与证书时 `wss://:443`,由 `relay/config.json` 决定)。
 不依赖 TLS 保密,因为有端到端加密;但 relay 自身身份用 Ed25519 密钥签名,App 与 agent 都固定(pin)它。
