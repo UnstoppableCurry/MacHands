@@ -74,3 +74,7 @@ Cursor:       Settings → MCP → Add: npx -y machands mcp
 ```
 
 MacHands 不是 Apple、Anthropic、OpenAI 或 xAI 的产品。
+
+## 许可
+
+源码以 [MIT](LICENSE) 开源。
